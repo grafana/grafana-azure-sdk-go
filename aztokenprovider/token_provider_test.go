@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/azsettings"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestAzureTokenProvider_GetAccessToken(t *testing.T) {
 		})
 
 		t.Run("should resolve client secret retriever if auth type is client secret", func(t *testing.T) {
-			credentials := &azcredentials.AzureClientSecretCredentials{}
+			credentials := &azcredentials.AzureClientSecretCredentials{AzureCloud: azsettings.AzurePublic}
 
 			provider, err := NewAzureAccessTokenProvider(settings, credentials)
 			require.NoError(t, err)
@@ -77,52 +78,63 @@ func TestAzureTokenProvider_GetAccessToken(t *testing.T) {
 }
 
 func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
-	credentials := &azcredentials.AzureClientSecretCredentials{
-		AzureCloud:   azsettings.AzurePublic,
-		Authority:    "",
-		TenantId:     "7dcf1d1a-4ec0-41f2-ac29-c1538a698bc4",
-		ClientId:     "1af7c188-e5b6-4f96-81b8-911761bdd459",
-		ClientSecret: "0416d95e-8af8-472c-aaa3-15c93c46080a",
+	defaultCredentials := func() *azcredentials.AzureClientSecretCredentials {
+		return &azcredentials.AzureClientSecretCredentials{
+			AzureCloud:   azsettings.AzurePublic,
+			Authority:    "",
+			TenantId:     "7dcf1d1a-4ec0-41f2-ac29-c1538a698bc4",
+			ClientId:     "1af7c188-e5b6-4f96-81b8-911761bdd459",
+			ClientSecret: "0416d95e-8af8-472c-aaa3-15c93c46080a",
+		}
 	}
 
 	t.Run("should return clientSecretTokenRetriever with values", func(t *testing.T) {
-		result := getClientSecretTokenRetriever(credentials)
-		assert.IsType(t, &clientSecretTokenRetriever{}, result)
+		credentials := defaultCredentials()
 
+		result, err := getClientSecretTokenRetriever(credentials)
+		require.NoError(t, err)
+
+		assert.IsType(t, &clientSecretTokenRetriever{}, result)
 		credential := (result).(*clientSecretTokenRetriever)
 
-		assert.Equal(t, "https://login.microsoftonline.com/", credential.authority)
+		assert.Equal(t, azidentity.AuthorityHost("https://login.microsoftonline.com/"), credential.authority)
 		assert.Equal(t, "7dcf1d1a-4ec0-41f2-ac29-c1538a698bc4", credential.tenantId)
 		assert.Equal(t, "1af7c188-e5b6-4f96-81b8-911761bdd459", credential.clientId)
 		assert.Equal(t, "0416d95e-8af8-472c-aaa3-15c93c46080a", credential.clientSecret)
 	})
 
 	t.Run("authority should selected based on cloud", func(t *testing.T) {
-		originalCloud := credentials.AzureCloud
-		defer func() { credentials.AzureCloud = originalCloud }()
-
+		credentials := defaultCredentials()
 		credentials.AzureCloud = azsettings.AzureChina
 
-		result := getClientSecretTokenRetriever(credentials)
-		assert.IsType(t, &clientSecretTokenRetriever{}, result)
+		result, err := getClientSecretTokenRetriever(credentials)
+		require.NoError(t, err)
 
+		assert.IsType(t, &clientSecretTokenRetriever{}, result)
 		credential := (result).(*clientSecretTokenRetriever)
 
-		assert.Equal(t, "https://login.chinacloudapi.cn/", credential.authority)
+		assert.Equal(t, azidentity.AuthorityHost("https://login.chinacloudapi.cn/"), credential.authority)
 	})
 
 	t.Run("explicitly set authority should have priority over cloud", func(t *testing.T) {
-		originalCloud := credentials.AzureCloud
-		defer func() { credentials.AzureCloud = originalCloud }()
-
+		credentials := defaultCredentials()
 		credentials.AzureCloud = azsettings.AzureChina
 		credentials.Authority = "https://another.com/"
 
-		result := getClientSecretTokenRetriever(credentials)
-		assert.IsType(t, &clientSecretTokenRetriever{}, result)
+		result, err := getClientSecretTokenRetriever(credentials)
+		require.NoError(t, err)
 
+		assert.IsType(t, &clientSecretTokenRetriever{}, result)
 		credential := (result).(*clientSecretTokenRetriever)
 
-		assert.Equal(t, "https://another.com/", credential.authority)
+		assert.Equal(t, azidentity.AuthorityHost("https://another.com/"), credential.authority)
+	})
+
+	t.Run("should fail with error if cloud is not supported", func(t *testing.T) {
+		credentials := defaultCredentials()
+		credentials.AzureCloud = "InvalidCloud"
+
+		_, err := getClientSecretTokenRetriever(credentials)
+		require.Error(t, err)
 	})
 }

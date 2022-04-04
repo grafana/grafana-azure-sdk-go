@@ -25,12 +25,14 @@ type tokenProviderImpl struct {
 }
 
 func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials azcredentials.AzureCredentials) (AzureTokenProvider, error) {
+	var err error
+
 	if settings == nil {
-		err := fmt.Errorf("parameter 'settings' cannot be nil")
+		err = fmt.Errorf("parameter 'settings' cannot be nil")
 		return nil, err
 	}
 	if credentials == nil {
-		err := fmt.Errorf("parameter 'credentials' cannot be nil")
+		err = fmt.Errorf("parameter 'credentials' cannot be nil")
 		return nil, err
 	}
 
@@ -39,15 +41,18 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 	switch c := credentials.(type) {
 	case *azcredentials.AzureManagedIdentityCredentials:
 		if !settings.ManagedIdentityEnabled {
-			err := fmt.Errorf("managed identity authentication is not enabled in Grafana config")
+			err = fmt.Errorf("managed identity authentication is not enabled in Grafana config")
 			return nil, err
 		} else {
 			tokenRetriever = getManagedIdentityTokenRetriever(settings, c)
 		}
 	case *azcredentials.AzureClientSecretCredentials:
-		tokenRetriever = getClientSecretTokenRetriever(c)
+		tokenRetriever, err = getClientSecretTokenRetriever(c)
+		if err != nil {
+			return nil, err
+		}
 	default:
-		err := fmt.Errorf("credentials of type '%s' not supported by authentication provider", c.AzureAuthType())
+		err = fmt.Errorf("credentials of type '%s' not supported by authentication provider", c.AzureAuthType())
 		return nil, err
 	}
 
@@ -87,34 +92,37 @@ func getManagedIdentityTokenRetriever(settings *azsettings.AzureSettings, creden
 	}
 }
 
-func getClientSecretTokenRetriever(credentials *azcredentials.AzureClientSecretCredentials) TokenRetriever {
-	var authority string
+func getClientSecretTokenRetriever(credentials *azcredentials.AzureClientSecretCredentials) (TokenRetriever, error) {
+	var authority azidentity.AuthorityHost
 	if credentials.Authority != "" {
-		authority = credentials.Authority
+		authority = azidentity.AuthorityHost(credentials.Authority)
 	} else {
-		authority = resolveAuthorityForCloud(credentials.AzureCloud)
+		var err error
+		authority, err = resolveAuthorityForCloud(credentials.AzureCloud)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &clientSecretTokenRetriever{
 		authority:    authority,
 		tenantId:     credentials.TenantId,
 		clientId:     credentials.ClientId,
 		clientSecret: credentials.ClientSecret,
-	}
+	}, nil
 }
 
-func resolveAuthorityForCloud(cloudName string) string {
+func resolveAuthorityForCloud(cloudName string) (azidentity.AuthorityHost, error) {
 	// Known Azure clouds
 	switch cloudName {
 	case azsettings.AzurePublic:
-		return azidentity.AzurePublicCloud
+		return azidentity.AzurePublicCloud, nil
 	case azsettings.AzureChina:
-		return azidentity.AzureChina
+		return azidentity.AzureChina, nil
 	case azsettings.AzureUSGovernment:
-		return azidentity.AzureGovernment
-	case azsettings.AzureGermany:
-		return azidentity.AzureGermany
+		return azidentity.AzureGovernment, nil
 	default:
-		return ""
+		err := fmt.Errorf("the Azure cloud '%s' not supported", cloudName)
+		return "", err
 	}
 }
 
@@ -132,7 +140,8 @@ func (c *managedIdentityTokenRetriever) GetCacheKey() string {
 }
 
 func (c *managedIdentityTokenRetriever) Init() error {
-	if credential, err := azidentity.NewManagedIdentityCredential(c.clientId, nil); err != nil {
+	options := &azidentity.ManagedIdentityCredentialOptions{ID: azidentity.ClientID(c.clientId)}
+	if credential, err := azidentity.NewManagedIdentityCredential(options); err != nil {
 		return err
 	} else {
 		c.credential = credential
@@ -150,7 +159,7 @@ func (c *managedIdentityTokenRetriever) GetAccessToken(ctx context.Context, scop
 }
 
 type clientSecretTokenRetriever struct {
-	authority    string
+	authority    azidentity.AuthorityHost
 	tenantId     string
 	clientId     string
 	clientSecret string
