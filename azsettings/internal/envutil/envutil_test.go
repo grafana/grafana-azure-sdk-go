@@ -15,8 +15,9 @@ const (
 
 func TestGet(t *testing.T) {
 	t.Run("should return variable value if variable is set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "StringValue")
+		unset, err := setEnvVar(envTestKey, "StringValue")
 		require.NoError(t, err)
+		defer unset()
 
 		value, err := Get(envTestKey)
 		require.NoError(t, err)
@@ -24,8 +25,9 @@ func TestGet(t *testing.T) {
 	})
 
 	t.Run("should return error if variable not set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
+		defer unset()
 
 		_, err = Get(envTestKey)
 		assert.Error(t, err)
@@ -34,16 +36,18 @@ func TestGet(t *testing.T) {
 
 func TestGetOrDefault(t *testing.T) {
 	t.Run("should return variable value if variable is set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "StringValue")
+		unset, err := setEnvVar(envTestKey, "StringValue")
 		require.NoError(t, err)
+		defer unset()
 
 		value := GetOrDefault(envTestKey, "DefaultValue")
 		assert.Equal(t, "StringValue", value)
 	})
 
 	t.Run("should return default value if variable not set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
+		defer unset()
 
 		value := GetOrDefault(envTestKey, "DefaultValue")
 		assert.Equal(t, "DefaultValue", value)
@@ -67,8 +71,9 @@ func TestGetBool(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			err := os.Setenv(envTestKey, tt.EnvValue)
+			unset, err := setEnvVar(envTestKey, tt.EnvValue)
 			require.NoError(t, err)
+			defer unset()
 
 			value, err := GetBool(envTestKey)
 			require.NoError(t, err)
@@ -80,16 +85,18 @@ func TestGetBool(t *testing.T) {
 	})
 
 	t.Run("should return error if variable not set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
+		defer unset()
 
 		_, err = GetBool(envTestKey)
 		assert.Error(t, err)
 	})
 
 	t.Run("should return error if variable is not bool value", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "StringValue")
+		unset, err := setEnvVar(envTestKey, "StringValue")
 		require.NoError(t, err)
+		defer unset()
 
 		_, err = GetBool(envTestKey)
 		assert.Error(t, err)
@@ -98,8 +105,9 @@ func TestGetBool(t *testing.T) {
 
 func TestGetBoolOrDefault(t *testing.T) {
 	t.Run("should return variable value if variable is set to a bool value", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "false")
+		unset, err := setEnvVar(envTestKey, "false")
 		require.NoError(t, err)
+		defer unset()
 
 		value, err := GetBoolOrDefault(envTestKey, true)
 		require.NoError(t, err)
@@ -107,8 +115,9 @@ func TestGetBoolOrDefault(t *testing.T) {
 	})
 
 	t.Run("should return default value if variable not set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
+		defer unset()
 
 		value, err := GetBoolOrDefault(envTestKey, true)
 		require.NoError(t, err)
@@ -116,8 +125,9 @@ func TestGetBoolOrDefault(t *testing.T) {
 	})
 
 	t.Run("should return error if variable is not bool value", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "StringValue")
+		unset, err := setEnvVar(envTestKey, "StringValue")
 		require.NoError(t, err)
+		defer unset()
 
 		_, err = GetBoolOrDefault(envTestKey, true)
 		assert.Error(t, err)
@@ -126,30 +136,36 @@ func TestGetBoolOrDefault(t *testing.T) {
 
 func TestGetOrFallback(t *testing.T) {
 	t.Run("should return main value if main variable is set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "StringValue")
+		unset, err := setEnvVar(envTestKey, "StringValue")
 		require.NoError(t, err)
-		err = os.Setenv(fallbackTestKey, "FallbackStringValue")
+		defer unset()
+		unset, err = setEnvVar(fallbackTestKey, "FallbackStringValue")
 		require.NoError(t, err)
+		defer unset()
 
 		value := GetOrFallback(envTestKey, fallbackTestKey, "DefaultValue")
 		assert.Equal(t, "StringValue", value)
 	})
 
 	t.Run("should return fallback value if main variable is not set but fallback variable is set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
-		err = os.Setenv(fallbackTestKey, "FallbackStringValue")
+		defer unset()
+		unset, err = setEnvVar(fallbackTestKey, "FallbackStringValue")
 		require.NoError(t, err)
+		defer unset()
 
 		value := GetOrFallback(envTestKey, fallbackTestKey, "DefaultValue")
 		assert.Equal(t, "FallbackStringValue", value)
 	})
 
 	t.Run("should return default value if neither main nor fallback variables are set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
-		err = os.Setenv(fallbackTestKey, "")
+		defer unset()
+		unset, err = setEnvVar(fallbackTestKey, "")
 		require.NoError(t, err)
+		defer unset()
 
 		value := GetOrFallback(envTestKey, fallbackTestKey, "DefaultValue")
 		assert.Equal(t, "DefaultValue", value)
@@ -158,10 +174,12 @@ func TestGetOrFallback(t *testing.T) {
 
 func TestGetBoolOrFallback(t *testing.T) {
 	t.Run("should return main value if main variable is set to a bool value", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "true")
+		unset, err := setEnvVar(envTestKey, "true")
 		require.NoError(t, err)
-		err = os.Setenv(fallbackTestKey, "false")
+		defer unset()
+		unset, err = setEnvVar(fallbackTestKey, "false")
 		require.NoError(t, err)
+		defer unset()
 
 		value, err := GetBoolOrFallback(envTestKey, fallbackTestKey, true)
 		require.NoError(t, err)
@@ -169,10 +187,12 @@ func TestGetBoolOrFallback(t *testing.T) {
 	})
 
 	t.Run("should return fallback value if main variable is not set but fallback variable is set to a bool value", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
-		err = os.Setenv(fallbackTestKey, "false")
+		defer unset()
+		unset, err = setEnvVar(fallbackTestKey, "false")
 		require.NoError(t, err)
+		defer unset()
 
 		value, err := GetBoolOrFallback(envTestKey, fallbackTestKey, true)
 		require.NoError(t, err)
@@ -180,10 +200,12 @@ func TestGetBoolOrFallback(t *testing.T) {
 	})
 
 	t.Run("should return default value if neither main nor fallback variables are set", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
-		err = os.Setenv(fallbackTestKey, "")
+		defer unset()
+		unset, err = setEnvVar(fallbackTestKey, "")
 		require.NoError(t, err)
+		defer unset()
 
 		value, err := GetBoolOrFallback(envTestKey, fallbackTestKey, true)
 		require.NoError(t, err)
@@ -191,22 +213,39 @@ func TestGetBoolOrFallback(t *testing.T) {
 	})
 
 	t.Run("should return error if main variable is not bool value", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "StringValue")
+		unset, err := setEnvVar(envTestKey, "StringValue")
 		require.NoError(t, err)
-		err = os.Setenv(fallbackTestKey, "false")
+		defer unset()
+		unset, err = setEnvVar(fallbackTestKey, "false")
 		require.NoError(t, err)
+		defer unset()
 
 		_, err = GetBoolOrFallback(envTestKey, fallbackTestKey, true)
 		assert.Error(t, err)
 	})
 
 	t.Run("should return error if fallback variable is not bool value", func(t *testing.T) {
-		err := os.Setenv(envTestKey, "")
+		unset, err := setEnvVar(envTestKey, "")
 		require.NoError(t, err)
-		err = os.Setenv(fallbackTestKey, "FallbackStringValue")
+		defer unset()
+		unset, err = setEnvVar(fallbackTestKey, "FallbackStringValue")
 		require.NoError(t, err)
+		defer unset()
 
 		_, err = GetBoolOrFallback(envTestKey, fallbackTestKey, true)
 		assert.Error(t, err)
 	})
+}
+
+type unsetFunc = func()
+
+func setEnvVar(key string, value string) (unsetFunc, error) {
+	err := os.Setenv(key, value)
+	if err != nil {
+		return nil, err
+	}
+
+	return func() {
+		_ = os.Unsetenv(key)
+	}, nil
 }
