@@ -10,7 +10,7 @@ import (
 
 func TestReadFromEnv(t *testing.T) {
 	t.Run("should set cloud if variable is set", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_CLOUD", "TestCloud")
+		err := os.Setenv("GFAZPL_AZURE_CLOUD", "TestCloud")
 		require.NoError(t, err)
 
 		azureSettings, err := ReadFromEnv()
@@ -20,7 +20,7 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should set cloud if fallback variable is set", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_CLOUD", "")
+		err := os.Setenv("GFAZPL_AZURE_CLOUD", "")
 		require.NoError(t, err)
 		err = os.Setenv("AZURE_CLOUD", "FallbackCloud")
 		require.NoError(t, err)
@@ -32,7 +32,7 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should set cloud to public cloud if variable is not set", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_CLOUD", "")
+		err := os.Setenv("GFAZPL_AZURE_CLOUD", "")
 		require.NoError(t, err)
 		err = os.Setenv("AZURE_CLOUD", "")
 		require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should enable managed identity if variable is set", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED", "true")
+		err := os.Setenv("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
 		require.NoError(t, err)
 
 		azureSettings, err := ReadFromEnv()
@@ -54,7 +54,7 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should enable managed identity if fallback variable is set", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED", "")
+		err := os.Setenv("GFAZPL_MANAGED_IDENTITY_ENABLED", "")
 		require.NoError(t, err)
 		err = os.Setenv("AZURE_MANAGED_IDENTITY_ENABLED", "true")
 		require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should disable managed identity if variable is not set", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED", "")
+		err := os.Setenv("GFAZPL_AZURE_MANAGED_IDENTITY_ENABLED", "")
 		require.NoError(t, err)
 		err = os.Setenv("AZURE_MANAGED_IDENTITY_ENABLED", "")
 		require.NoError(t, err)
@@ -78,9 +78,9 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should set client ID if variable is set", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED", "true")
+		err := os.Setenv("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
 		require.NoError(t, err)
-		err = os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
+		err = os.Setenv("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
 		require.NoError(t, err)
 
 		azureSettings, err := ReadFromEnv()
@@ -90,9 +90,9 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should set client ID if fallback variable is set", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED", "true")
+		err := os.Setenv("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
 		require.NoError(t, err)
-		err = os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_CLIENT_ID", "")
+		err = os.Setenv("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "")
 		require.NoError(t, err)
 		err = os.Setenv("AZURE_MANAGED_IDENTITY_CLIENT_ID", "FallbackClientId")
 		require.NoError(t, err)
@@ -104,9 +104,9 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should not set client ID if managed identity is not enabled", func(t *testing.T) {
-		err := os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED", "false")
+		err := os.Setenv("GFAZPL_MANAGED_IDENTITY_ENABLED", "false")
 		require.NoError(t, err)
-		err = os.Setenv("GF_PLUGIN_AZURE_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
+		err = os.Setenv("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
 		require.NoError(t, err)
 
 		azureSettings, err := ReadFromEnv()
@@ -131,7 +131,7 @@ func TestWriteToEnvStr(t *testing.T) {
 		envs := WriteToEnvStr(azureSettings)
 
 		require.Len(t, envs, 1)
-		assert.Equal(t, "GF_PLUGIN_AZURE_CLOUD=AzureCloud", envs[0])
+		assert.Equal(t, "GFAZPL_AZURE_CLOUD=AzureCloud", envs[0])
 	})
 
 	t.Run("should return managed identity set if enabled", func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestWriteToEnvStr(t *testing.T) {
 		envs := WriteToEnvStr(azureSettings)
 
 		require.Len(t, envs, 1)
-		assert.Equal(t, "GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED=true", envs[0])
+		assert.Equal(t, "GFAZPL_MANAGED_IDENTITY_ENABLED=true", envs[0])
 	})
 
 	t.Run("should return managed identity client ID if provided", func(t *testing.T) {
@@ -154,8 +154,8 @@ func TestWriteToEnvStr(t *testing.T) {
 		envs := WriteToEnvStr(azureSettings)
 
 		require.Len(t, envs, 2)
-		assert.Equal(t, "GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED=true", envs[0])
-		assert.Equal(t, "GF_PLUGIN_AZURE_MANAGED_IDENTITY_CLIENT_ID=c2e68b2e", envs[1])
+		assert.Equal(t, "GFAZPL_MANAGED_IDENTITY_ENABLED=true", envs[0])
+		assert.Equal(t, "GFAZPL_MANAGED_IDENTITY_CLIENT_ID=c2e68b2e", envs[1])
 	})
 
 	t.Run("should not return managed identity client ID if not enabled", func(t *testing.T) {

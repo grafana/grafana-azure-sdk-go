@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	envAzureCloud              = "GF_PLUGIN_AZURE_CLOUD"
-	envManagedIdentityEnabled  = "GF_PLUGIN_AZURE_MANAGED_IDENTITY_ENABLED"
-	envManagedIdentityClientId = "GF_PLUGIN_AZURE_MANAGED_IDENTITY_CLIENT_ID"
+	envAzureCloud              = "GFAZPL_AZURE_CLOUD"
+	envManagedIdentityEnabled  = "GFAZPL_MANAGED_IDENTITY_ENABLED"
+	envManagedIdentityClientId = "GFAZPL_MANAGED_IDENTITY_CLIENT_ID"
 
 	// Pre Grafana 9.x variables
 	fallbackAzureCloud              = "AZURE_CLOUD"
