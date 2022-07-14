@@ -142,13 +142,11 @@ func (c *managedIdentityTokenRetriever) GetCacheKey() string {
 func (c *managedIdentityTokenRetriever) Init() error {
 	var credential *azidentity.ManagedIdentityCredential
 	var err error
+	options := &azidentity.ManagedIdentityCredentialOptions{}
 	if c.clientId != "" {
-		options := &azidentity.ManagedIdentityCredentialOptions{ID: azidentity.ClientID(c.clientId)}
-		credential, err = azidentity.NewManagedIdentityCredential(options)
-	} else {
-		// In order to select the system assigned identity the client ID must explicitly be set to nil
-		credential, err = azidentity.NewManagedIdentityCredential(nil)
+		options.ID = azidentity.ClientID(c.clientId)
 	}
+	credential, err = azidentity.NewManagedIdentityCredential(options)
 	if err != nil {
 		return err
 	} else {
