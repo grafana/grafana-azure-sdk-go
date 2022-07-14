@@ -140,13 +140,11 @@ func (c *managedIdentityTokenRetriever) GetCacheKey() string {
 }
 
 func (c *managedIdentityTokenRetriever) Init() error {
-	var credential *azidentity.ManagedIdentityCredential
-	var err error
 	options := &azidentity.ManagedIdentityCredentialOptions{}
 	if c.clientId != "" {
 		options.ID = azidentity.ClientID(c.clientId)
 	}
-	credential, err = azidentity.NewManagedIdentityCredential(options)
+	credential, err := azidentity.NewManagedIdentityCredential(options)
 	if err != nil {
 		return err
 	} else {
