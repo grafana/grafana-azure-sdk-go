@@ -131,6 +131,17 @@ func TestReadFromEnv(t *testing.T) {
 
 		assert.Equal(t, "", azureSettings.ManagedIdentityClientId)
 	})
+
+	t.Run("should enable client OBO if variable is set", func(t *testing.T) {
+		unset, err := setEnvVar("GFAZPL_CLIENT_OBO_ENABLED", "true")
+		require.NoError(t, err)
+		defer unset()
+
+		azureSettings, err := ReadFromEnv()
+		require.NoError(t, err)
+
+		assert.True(t, azureSettings.ClientOnBehalfOfEnabled)
+	})
 }
 
 func TestWriteToEnvStr(t *testing.T) {

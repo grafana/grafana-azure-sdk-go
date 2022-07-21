@@ -1,7 +1,10 @@
 package azsettings
 
 type AzureSettings struct {
-	Cloud                   string
+	Cloud string
+
 	ManagedIdentityEnabled  bool
 	ManagedIdentityClientId string
+
+	ClientOnBehalfOfEnabled bool
 }
