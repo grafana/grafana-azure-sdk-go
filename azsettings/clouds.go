@@ -52,12 +52,6 @@ func NormalizeAzureCloud(cloudName string) string {
 
 	// Customized
 	case "azurecustomizedcloud":
-		fallthrough
-	case "azurecustomized":
-		fallthrough
-	case "custom":
-		fallthrough
-	case "customized":
 		return AzureCustomized
 	}
 
