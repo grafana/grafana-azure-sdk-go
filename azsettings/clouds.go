@@ -6,8 +6,6 @@ const (
 	AzurePublic       = "AzureCloud"
 	AzureChina        = "AzureChinaCloud"
 	AzureUSGovernment = "AzureUSGovernment"
-	AzureGermany      = "AzureGermanCloud"
-	AzureCustomized   = "AzureCustomizedCloud"
 )
 
 func NormalizeAzureCloud(cloudName string) string {
@@ -39,20 +37,6 @@ func NormalizeAzureCloud(cloudName string) string {
 		fallthrough
 	case "usgovernment":
 		return AzureUSGovernment
-
-	// Germany
-	case "azuregermancloud":
-		fallthrough
-	case "azuregermany":
-		fallthrough
-	case "german":
-		fallthrough
-	case "germany":
-		return AzureGermany
-
-	// Customized
-	case "azurecustomizedcloud":
-		return AzureCustomized
 	}
 
 	// Pass the name unchanged if it's not known
