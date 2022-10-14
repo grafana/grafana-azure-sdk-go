@@ -1,12 +1,17 @@
 package azcredentials
 
 const (
-	AzureAuthManagedIdentity = "msi"
-	AzureAuthClientSecret    = "clientsecret"
+	AzureAuthCurrentUserIdentity = "currentuser"
+	AzureAuthManagedIdentity     = "msi"
+	AzureAuthClientSecret        = "clientsecret"
+	AzureAuthClientSecretObo     = "clientsecret-obo"
 )
 
 type AzureCredentials interface {
 	AzureAuthType() string
+}
+
+type AadCurrentUserCredentials struct {
 }
 
 type AzureManagedIdentityCredentials struct {
@@ -21,10 +26,22 @@ type AzureClientSecretCredentials struct {
 	ClientSecret string
 }
 
+type AzureClientSecretOboCredentials struct {
+	ClientSecretCredentials AzureClientSecretCredentials
+}
+
+func (credentials *AadCurrentUserCredentials) AzureAuthType() string {
+	return AzureAuthCurrentUserIdentity
+}
+
 func (credentials *AzureManagedIdentityCredentials) AzureAuthType() string {
 	return AzureAuthManagedIdentity
 }
 
 func (credentials *AzureClientSecretCredentials) AzureAuthType() string {
 	return AzureAuthClientSecret
+}
+
+func (credentials *AzureClientSecretOboCredentials) AzureAuthType() string {
+	return AzureAuthClientSecretObo
 }
