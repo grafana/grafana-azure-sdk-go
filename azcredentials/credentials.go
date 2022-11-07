@@ -11,13 +11,17 @@ type AzureCredentials interface {
 	AzureAuthType() string
 }
 
+// AadCurrentUserCredentials "Current User" user identity credentials of the current Grafana user.
 type AadCurrentUserCredentials struct {
 }
 
+// AzureManagedIdentityCredentials "Managed Identity" service managed identity credentials configured
+// for the current Grafana instance.
 type AzureManagedIdentityCredentials struct {
 	ClientId string
 }
 
+// AzureClientSecretCredentials "App Registration" AAD service identity credentials configured in the datasource.
 type AzureClientSecretCredentials struct {
 	AzureCloud   string
 	Authority    string
@@ -26,6 +30,8 @@ type AzureClientSecretCredentials struct {
 	ClientSecret string
 }
 
+// AzureClientSecretOboCredentials "App Registration (On-Behalf-Of)" user identity credentials obtained using
+// service identity configured in the datasource.
 type AzureClientSecretOboCredentials struct {
 	ClientSecretCredentials AzureClientSecretCredentials
 }
