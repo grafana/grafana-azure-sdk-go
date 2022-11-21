@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
@@ -93,36 +94,36 @@ func getManagedIdentityTokenRetriever(settings *azsettings.AzureSettings, creden
 }
 
 func getClientSecretTokenRetriever(credentials *azcredentials.AzureClientSecretCredentials) (TokenRetriever, error) {
-	var authority azidentity.AuthorityHost
+	var cloudConf cloud.Configuration
 	if credentials.Authority != "" {
-		authority = azidentity.AuthorityHost(credentials.Authority)
+		cloudConf.ActiveDirectoryAuthorityHost = credentials.Authority
 	} else {
 		var err error
-		authority, err = resolveAuthorityForCloud(credentials.AzureCloud)
+		cloudConf, err = resolveCloudConfiguration(credentials.AzureCloud)
 		if err != nil {
 			return nil, err
 		}
 	}
 	return &clientSecretTokenRetriever{
-		authority:    authority,
+		cloudConf:    cloudConf,
 		tenantId:     credentials.TenantId,
 		clientId:     credentials.ClientId,
 		clientSecret: credentials.ClientSecret,
 	}, nil
 }
 
-func resolveAuthorityForCloud(cloudName string) (azidentity.AuthorityHost, error) {
+func resolveCloudConfiguration(cloudName string) (cloud.Configuration, error) {
 	// Known Azure clouds
 	switch cloudName {
 	case azsettings.AzurePublic:
-		return azidentity.AzurePublicCloud, nil
+		return cloud.AzurePublic, nil
 	case azsettings.AzureChina:
-		return azidentity.AzureChina, nil
+		return cloud.AzureChina, nil
 	case azsettings.AzureUSGovernment:
-		return azidentity.AzureGovernment, nil
+		return cloud.AzureGovernment, nil
 	default:
 		err := fmt.Errorf("the Azure cloud '%s' not supported", cloudName)
-		return "", err
+		return cloud.Configuration{}, err
 	}
 }
 
@@ -163,7 +164,7 @@ func (c *managedIdentityTokenRetriever) GetAccessToken(ctx context.Context, scop
 }
 
 type clientSecretTokenRetriever struct {
-	authority    azidentity.AuthorityHost
+	cloudConf    cloud.Configuration
 	tenantId     string
 	clientId     string
 	clientSecret string
@@ -171,12 +172,13 @@ type clientSecretTokenRetriever struct {
 }
 
 func (c *clientSecretTokenRetriever) GetCacheKey() string {
-	return fmt.Sprintf("azure|clientsecret|%s|%s|%s|%s", c.authority, c.tenantId, c.clientId, hashSecret(c.clientSecret))
+	return fmt.Sprintf("azure|clientsecret|%s|%s|%s|%s", c.cloudConf.ActiveDirectoryAuthorityHost, c.tenantId, c.clientId, hashSecret(c.clientSecret))
 }
 
 func (c *clientSecretTokenRetriever) Init() error {
-	options := &azidentity.ClientSecretCredentialOptions{AuthorityHost: c.authority}
-	if credential, err := azidentity.NewClientSecretCredential(c.tenantId, c.clientId, c.clientSecret, options); err != nil {
+	options := azidentity.ClientSecretCredentialOptions{}
+	options.Cloud = c.cloudConf
+	if credential, err := azidentity.NewClientSecretCredential(c.tenantId, c.clientId, c.clientSecret, &options); err != nil {
 		return err
 	} else {
 		c.credential = credential

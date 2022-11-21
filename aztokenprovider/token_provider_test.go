@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/azsettings"
 	"github.com/stretchr/testify/assert"
@@ -97,7 +96,7 @@ func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
 		assert.IsType(t, &clientSecretTokenRetriever{}, result)
 		credential := (result).(*clientSecretTokenRetriever)
 
-		assert.Equal(t, azidentity.AuthorityHost("https://login.microsoftonline.com/"), credential.authority)
+		assert.Equal(t, "https://login.microsoftonline.com/", credential.cloudConf.ActiveDirectoryAuthorityHost)
 		assert.Equal(t, "7dcf1d1a-4ec0-41f2-ac29-c1538a698bc4", credential.tenantId)
 		assert.Equal(t, "1af7c188-e5b6-4f96-81b8-911761bdd459", credential.clientId)
 		assert.Equal(t, "0416d95e-8af8-472c-aaa3-15c93c46080a", credential.clientSecret)
@@ -113,7 +112,7 @@ func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
 		assert.IsType(t, &clientSecretTokenRetriever{}, result)
 		credential := (result).(*clientSecretTokenRetriever)
 
-		assert.Equal(t, azidentity.AuthorityHost("https://login.chinacloudapi.cn/"), credential.authority)
+		assert.Equal(t, "https://login.chinacloudapi.cn/", credential.cloudConf.ActiveDirectoryAuthorityHost)
 	})
 
 	t.Run("explicitly set authority should have priority over cloud", func(t *testing.T) {
@@ -127,7 +126,7 @@ func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
 		assert.IsType(t, &clientSecretTokenRetriever{}, result)
 		credential := (result).(*clientSecretTokenRetriever)
 
-		assert.Equal(t, azidentity.AuthorityHost("https://another.com/"), credential.authority)
+		assert.Equal(t, "https://another.com/", credential.cloudConf.ActiveDirectoryAuthorityHost)
 	})
 
 	t.Run("should fail with error if cloud is not supported", func(t *testing.T) {
