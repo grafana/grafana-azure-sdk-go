@@ -1,0 +1,18 @@
+[
+  {
+    "type": "label",
+    "name": "azure-sdk",
+    "action": "addToProject",
+    "addToProject": {
+      "url": "https://github.com/orgs/grafana/projects/190"
+    }
+  },
+  {
+    "type": "label",
+    "name": "type/docs",
+    "action": "addToProject",
+    "addToProject": {
+      "url": "https://github.com/orgs/grafana/projects/69"
+    }
+  }
+]
