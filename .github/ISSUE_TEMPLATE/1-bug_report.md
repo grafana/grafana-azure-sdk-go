@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a bug you found when using this plugin
+about: Report a bug you found when using this library
 labels: ["azure-sdk", "type/bug"]
 ---
 
@@ -39,7 +39,7 @@ If applicable, add screenshots to help explain your problem.
 **Environment**:
 
 - Grafana version:
-- Plugin version:
+- Library version:
 - OS Grafana is installed on:
 - User OS & Browser:
 - Others:
