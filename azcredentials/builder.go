@@ -3,7 +3,7 @@ package azcredentials
 import (
 	"fmt"
 
-	"github.com/grafana/grafana-azure-sdk-go/azcredentials/internal/maputil"
+	"github.com/grafana/grafana-azure-sdk-go/util/maputil"
 )
 
 func FromDatasourceData(data map[string]interface{}, secureData map[string]string) (AzureCredentials, error) {
