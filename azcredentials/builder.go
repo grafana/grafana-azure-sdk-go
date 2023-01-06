@@ -44,7 +44,11 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		if err != nil {
 			return nil, err
 		}
-		clientSecret := secureData["azureClientSecret"]
+		clientSecret, ok := secureData["azureClientSecret"]
+		if !ok {
+			// Use legacy client secret if it was preserved during migration of credentials
+			clientSecret = secureData["clientSecret"]
+		}
 
 		credentials := &AzureClientSecretCredentials{
 			AzureCloud:   cloud,
@@ -67,7 +71,11 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		if err != nil {
 			return nil, err
 		}
-		clientSecret := secureData["azureClientSecret"]
+		clientSecret, ok := secureData["azureClientSecret"]
+		if !ok {
+			// Use legacy client secret if it was preserved during migration of credentials
+			clientSecret = secureData["clientSecret"]
+		}
 
 		credentials := &AzureClientSecretOboCredentials{
 			ClientSecretCredentials: AzureClientSecretCredentials{

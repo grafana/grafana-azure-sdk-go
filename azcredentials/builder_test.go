@@ -106,6 +106,77 @@ func TestFromDatasourceData(t *testing.T) {
 		assert.Equal(t, credential.ClientSecretCredentials.ClientSecret, "FAKE-SECRET")
 	})
 
+	t.Run("should return client secret when legacy client secret saved", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":   "clientsecret",
+				"azureCloud": "AzureCloud",
+				"tenantId":   "TENANT-ID",
+				"clientId":   "CLIENT-TD",
+			},
+		}
+		var secureData = map[string]string{
+			"clientSecret": "FAKE-LEGACY-SECRET",
+		}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		require.IsType(t, &AzureClientSecretCredentials{}, result)
+		credential := (result).(*AzureClientSecretCredentials)
+
+		assert.Equal(t, credential.ClientSecret, "FAKE-LEGACY-SECRET")
+	})
+
+	t.Run("should return on-behalf-of client secret when legacy client secret saved", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":   "clientsecret-obo",
+				"azureCloud": "AzureCloud",
+				"tenantId":   "TENANT-ID",
+				"clientId":   "CLIENT-TD",
+			},
+		}
+		var secureData = map[string]string{
+			"clientSecret": "FAKE-LEGACY-SECRET",
+		}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		require.IsType(t, &AzureClientSecretOboCredentials{}, result)
+		credential := (result).(*AzureClientSecretOboCredentials)
+
+		require.NotNil(t, credential.ClientSecretCredentials)
+		assert.Equal(t, credential.ClientSecretCredentials.ClientSecret, "FAKE-LEGACY-SECRET")
+	})
+
+	t.Run("should ignore legacy client secret if new client secret saved", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":   "clientsecret",
+				"azureCloud": "AzureCloud",
+				"tenantId":   "TENANT-ID",
+				"clientId":   "CLIENT-TD",
+			},
+		}
+		var secureData = map[string]string{
+			"azureClientSecret": "FAKE-SECRET",
+			"clientSecret":      "FAKE-LEGACY-SECRET",
+		}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		require.IsType(t, &AzureClientSecretCredentials{}, result)
+		credential := (result).(*AzureClientSecretCredentials)
+
+		assert.Equal(t, credential.ClientSecret, "FAKE-SECRET")
+	})
+
 	t.Run("should return error when credentials not supported", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
