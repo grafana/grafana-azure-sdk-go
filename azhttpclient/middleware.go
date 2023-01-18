@@ -1,25 +1,37 @@
 package azhttpclient
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
-	"github.com/grafana/grafana-azure-sdk-go/azsettings"
 	"github.com/grafana/grafana-azure-sdk-go/aztokenprovider"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
 )
 
 const azureMiddlewareName = "AzureAuthentication"
 
-func AzureMiddleware(settings *azsettings.AzureSettings, credentials azcredentials.AzureCredentials, scopes []string) httpclient.Middleware {
-	return httpclient.NamedMiddlewareFunc(azureMiddlewareName, func(opts httpclient.Options, next http.RoundTripper) http.RoundTripper {
-		tokenProvider, err := aztokenprovider.NewAzureAccessTokenProvider(settings, credentials)
+func AzureMiddleware(authOpts *AuthOptions, credentials azcredentials.AzureCredentials) httpclient.Middleware {
+	return httpclient.NamedMiddlewareFunc(azureMiddlewareName, func(clientOpts httpclient.Options, next http.RoundTripper) http.RoundTripper {
+		var err error
+		var tokenProvider aztokenprovider.AzureTokenProvider = nil
+
+		if tokenProviderFactory, ok := authOpts.customProviders[credentials.AzureAuthType()]; ok && tokenProviderFactory != nil {
+			tokenProvider, err = tokenProviderFactory(authOpts.settings, credentials)
+		} else {
+			tokenProvider, err = aztokenprovider.NewAzureAccessTokenProvider(authOpts.settings, credentials)
+		}
 		if err != nil {
 			return errorResponse(err)
 		}
 
-		return ApplyAzureAuth(tokenProvider, scopes, next)
+		if len(authOpts.scopes) == 0 {
+			err = errors.New("scopes not configured")
+			return errorResponse(err)
+		}
+
+		return ApplyAzureAuth(tokenProvider, authOpts.scopes, next)
 	})
 }
 
