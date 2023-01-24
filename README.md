@@ -27,10 +27,10 @@ Azure authentication middleware for Grafana Plugin SDK `httpclient`.
 authOpts := azhttpclient.NewAuthOptions(azureSettings)
 
 // Configure instance-level scopes
-authOpts.Scopes(new []string {"https://datasource.example.org/.default"})
+authOpts.Scopes([]string{"https://datasource.example.org/.default"})
 
 // Optionally, register custom token providers
-authOpts.AddTokenProvider("custom-auth-type, func (...) (aztokenprovider.AzureTokenProvider, error) {
+authOpts.AddTokenProvider("custom-auth-type", func (...) (aztokenprovider.AzureTokenProvider, error) {
 	return NewCustomTokenProvider(...), nil
 })
 
