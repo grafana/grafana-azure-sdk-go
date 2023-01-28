@@ -1,5 +1,6 @@
 # Change Log
 
-All notable changes to this project will be documented in this file.
+## v1.6.0
 
-## v0.0.X
+- **Breaking change:** Configurable authentication middleware with `AuthOptions` configuration struct [#28](https://github.com/grafana/grafana-azure-sdk-go/pull/28).
+- New context object `CurrentUserContext` to carry currently signed-in user identity [#30](https://github.com/grafana/grafana-azure-sdk-go/pull/30).
