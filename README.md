@@ -18,6 +18,29 @@ The built-in `AzureCredentials`:
 
 ### azhttpclient
 
+Azure authentication middleware for Grafana Plugin SDK `httpclient`.
+
+#### Usage
+
+```go
+// Initialize the authentication options
+authOpts := azhttpclient.NewAuthOptions(azureSettings)
+
+// Configure instance-level scopes
+authOpts.Scopes([]string{"https://datasource.example.org/.default"})
+
+// Optionally, register custom token providers
+authOpts.AddTokenProvider("custom-auth-type", func (...) (aztokenprovider.AzureTokenProvider, error) {
+	return NewCustomTokenProvider(...), nil
+})
+
+// Configure the client
+clientOpts := httpclient.Options{}
+azhttpclient.AddAzureAuthentication(&clientOpts, authOpts, credentials)
+
+httpClient, err := httpclient.NewProvider().New(clientOpts)
+```
+
 ### azusercontext
 
 Context object `CurrentUserContext` of the currently signed-in Grafana user which can be passed
