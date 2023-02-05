@@ -16,6 +16,7 @@ const (
 	envUserIdentityTokenUrl     = "GFAZPL_USER_IDENTITY_TOKEN_URL"
 	envUserIdentityClientId     = "GFAZPL_USER_IDENTITY_CLIENT_ID"
 	envUserIdentityClientSecret = "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
+	envUserIdentityAssertion    = "GFAZPL_USER_IDENTITY_ASSERTION"
 
 	// Pre Grafana 9.x variables
 	fallbackAzureCloud              = "AZURE_CLOUD"
@@ -56,11 +57,15 @@ func ReadFromEnv() (*AzureSettings, error) {
 
 		clientSecret := envutil.GetOrDefault(envUserIdentityClientSecret, "")
 
+		assertion := envutil.GetOrDefault(envUserIdentityAssertion, "")
+		usernameAssertion := assertion == "username"
+
 		azureSettings.UserIdentityEnabled = true
 		azureSettings.UserIdentityTokenEndpoint = &TokenEndpointSettings{
-			TokenUrl:     tokenUrl,
-			ClientId:     clientId,
-			ClientSecret: clientSecret,
+			TokenUrl:          tokenUrl,
+			ClientId:          clientId,
+			ClientSecret:      clientSecret,
+			UsernameAssertion: usernameAssertion,
 		}
 	}
 
@@ -95,6 +100,9 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 				}
 				if azureSettings.UserIdentityTokenEndpoint.ClientSecret != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", envUserIdentityClientSecret, azureSettings.UserIdentityTokenEndpoint.ClientSecret))
+				}
+				if azureSettings.UserIdentityTokenEndpoint.UsernameAssertion {
+					envs = append(envs, fmt.Sprintf("%s=username", envUserIdentityAssertion))
 				}
 			}
 		}

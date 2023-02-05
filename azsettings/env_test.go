@@ -323,6 +323,22 @@ func TestWriteToEnvStr(t *testing.T) {
 
 		assert.Len(t, envs, 0)
 	})
+
+	t.Run("should return assertion if username assertion is set", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			UserIdentityEnabled: true,
+			UserIdentityTokenEndpoint: &TokenEndpointSettings{
+				TokenUrl:          "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
+				ClientId:          "f85aa887-490d-4fac-9306-9b99ad0aa31d",
+				ClientSecret:      "87808761-ff7b-492e-bb0d-5de2437ffa55",
+				UsernameAssertion: true,
+			},
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		assert.Contains(t, envs, "GFAZPL_USER_IDENTITY_ASSERTION=username")
+	})
 }
 
 type unsetFunc = func()
