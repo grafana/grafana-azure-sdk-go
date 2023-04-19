@@ -21,12 +21,12 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should set cloud if fallback variable is set", func(t *testing.T) {
-		unset, err := setEnvVar("GFAZPL_AZURE_CLOUD", "")
+		unset1, err := setEnvVar("GFAZPL_AZURE_CLOUD", "")
 		require.NoError(t, err)
-		defer unset()
-		unset, err = setEnvVar("AZURE_CLOUD", "FallbackCloud")
+		defer unset1()
+		unset2, err := setEnvVar("AZURE_CLOUD", "FallbackCloud")
 		require.NoError(t, err)
-		defer unset()
+		defer unset2()
 
 		azureSettings, err := ReadFromEnv()
 		require.NoError(t, err)
@@ -35,12 +35,12 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should set cloud to public cloud if variable is not set", func(t *testing.T) {
-		unset, err := setEnvVar("GFAZPL_AZURE_CLOUD", "")
+		unset1, err := setEnvVar("GFAZPL_AZURE_CLOUD", "")
 		require.NoError(t, err)
-		defer unset()
-		unset, err = setEnvVar("AZURE_CLOUD", "")
+		defer unset1()
+		unset2, err := setEnvVar("AZURE_CLOUD", "")
 		require.NoError(t, err)
-		defer unset()
+		defer unset2()
 
 		azureSettings, err := ReadFromEnv()
 		require.NoError(t, err)
@@ -60,12 +60,12 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should enable managed identity if fallback variable is set", func(t *testing.T) {
-		unset, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "")
+		unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "")
 		require.NoError(t, err)
-		defer unset()
-		unset, err = setEnvVar("AZURE_MANAGED_IDENTITY_ENABLED", "true")
+		defer unset1()
+		unset2, err := setEnvVar("AZURE_MANAGED_IDENTITY_ENABLED", "true")
 		require.NoError(t, err)
-		defer unset()
+		defer unset2()
 
 		azureSettings, err := ReadFromEnv()
 		require.NoError(t, err)
@@ -74,12 +74,12 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should disable managed identity if variable is not set", func(t *testing.T) {
-		unset, err := setEnvVar("GFAZPL_AZURE_MANAGED_IDENTITY_ENABLED", "")
+		unset1, err := setEnvVar("GFAZPL_AZURE_MANAGED_IDENTITY_ENABLED", "")
 		require.NoError(t, err)
-		defer unset()
-		unset, err = setEnvVar("AZURE_MANAGED_IDENTITY_ENABLED", "")
+		defer unset1()
+		unset2, err := setEnvVar("AZURE_MANAGED_IDENTITY_ENABLED", "")
 		require.NoError(t, err)
-		defer unset()
+		defer unset2()
 
 		azureSettings, err := ReadFromEnv()
 		require.NoError(t, err)
@@ -88,12 +88,12 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should set client ID if variable is set", func(t *testing.T) {
-		unset, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
+		unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
 		require.NoError(t, err)
-		defer unset()
-		unset, err = setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
+		defer unset1()
+		unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
 		require.NoError(t, err)
-		defer unset()
+		defer unset2()
 
 		azureSettings, err := ReadFromEnv()
 		require.NoError(t, err)
@@ -102,15 +102,15 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should set client ID if fallback variable is set", func(t *testing.T) {
-		unset, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
+		unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
 		require.NoError(t, err)
-		defer unset()
-		unset, err = setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "")
+		defer unset1()
+		unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "")
 		require.NoError(t, err)
-		defer unset()
-		unset, err = setEnvVar("AZURE_MANAGED_IDENTITY_CLIENT_ID", "FallbackClientId")
+		defer unset2()
+		unset3, err := setEnvVar("AZURE_MANAGED_IDENTITY_CLIENT_ID", "FallbackClientId")
 		require.NoError(t, err)
-		defer unset()
+		defer unset3()
 
 		azureSettings, err := ReadFromEnv()
 		require.NoError(t, err)
@@ -119,17 +119,105 @@ func TestReadFromEnv(t *testing.T) {
 	})
 
 	t.Run("should not set client ID if managed identity is not enabled", func(t *testing.T) {
-		unset, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "false")
+		unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "false")
 		require.NoError(t, err)
-		defer unset()
-		unset, err = setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
+		defer unset1()
+		unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
 		require.NoError(t, err)
-		defer unset()
+		defer unset2()
 
 		azureSettings, err := ReadFromEnv()
 		require.NoError(t, err)
 
 		assert.Equal(t, "", azureSettings.ManagedIdentityClientId)
+	})
+
+	t.Run("when user identity enabled", func(t *testing.T) {
+		unset, err := setEnvVar("GFAZPL_USER_IDENTITY_ENABLED", "true")
+		require.NoError(t, err)
+		defer unset()
+
+		t.Run("should fail if user token URL isn't set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_USER_IDENTITY_TOKEN_URL", "")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_ID", "")
+			require.NoError(t, err)
+			defer unset2()
+
+			_, err = ReadFromEnv()
+			assert.Error(t, err)
+		})
+
+		t.Run("should fail if client ID isn't set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_USER_IDENTITY_TOKEN_URL", "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_ID", "")
+			require.NoError(t, err)
+			defer unset2()
+
+			_, err = ReadFromEnv()
+			assert.Error(t, err)
+		})
+
+		t.Run("should be enabled and endpoint settings initialized with token URL and client ID", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_USER_IDENTITY_TOKEN_URL", "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_ID", "f85aa887-490d-4fac-9306-9b99ad0aa31d")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			assert.True(t, azureSettings.UserIdentityEnabled)
+
+			require.NotNil(t, azureSettings.UserIdentityTokenEndpoint)
+			assert.Equal(t, "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token", azureSettings.UserIdentityTokenEndpoint.TokenUrl)
+			assert.Equal(t, "f85aa887-490d-4fac-9306-9b99ad0aa31d", azureSettings.UserIdentityTokenEndpoint.ClientId)
+		})
+
+		t.Run("should initialize endpoint settings with client secret if client secret is set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_USER_IDENTITY_TOKEN_URL", "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_ID", "f85aa887-490d-4fac-9306-9b99ad0aa31d")
+			require.NoError(t, err)
+			defer unset2()
+			unset3, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_SECRET", "87808761-ff7b-492e-bb0d-5de2437ffa55")
+			require.NoError(t, err)
+			defer unset3()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			require.NotNil(t, azureSettings.UserIdentityTokenEndpoint)
+			assert.Equal(t, "87808761-ff7b-492e-bb0d-5de2437ffa55", azureSettings.UserIdentityTokenEndpoint.ClientSecret)
+		})
+	})
+
+	t.Run("when user identity disabled", func(t *testing.T) {
+		unset, err := setEnvVar("GFAZPL_USER_IDENTITY_ENABLED", "false")
+		require.NoError(t, err)
+		defer unset()
+
+		t.Run("should be disabled and endpoint settings should be nil even when token URL and client ID is set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_USER_IDENTITY_TOKEN_URL", "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_ID", "f85aa887-490d-4fac-9306-9b99ad0aa31d")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			assert.False(t, azureSettings.UserIdentityEnabled)
+
+			require.Nil(t, azureSettings.UserIdentityTokenEndpoint)
+		})
 	})
 }
 
@@ -189,6 +277,67 @@ func TestWriteToEnvStr(t *testing.T) {
 		envs := WriteToEnvStr(azureSettings)
 
 		assert.Len(t, envs, 0)
+	})
+
+	t.Run("should return user identity set if enabled", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			UserIdentityEnabled: true,
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		require.Len(t, envs, 1)
+		assert.Equal(t, "GFAZPL_USER_IDENTITY_ENABLED=true", envs[0])
+	})
+
+	t.Run("should return user identity endpoint settings if user identity enabled", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			UserIdentityEnabled: true,
+			UserIdentityTokenEndpoint: &TokenEndpointSettings{
+				TokenUrl:     "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
+				ClientId:     "f85aa887-490d-4fac-9306-9b99ad0aa31d",
+				ClientSecret: "87808761-ff7b-492e-bb0d-5de2437ffa55",
+			},
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		assert.Len(t, envs, 4)
+		assert.Equal(t, "GFAZPL_USER_IDENTITY_ENABLED=true", envs[0])
+		assert.Equal(t, "GFAZPL_USER_IDENTITY_TOKEN_URL=https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token", envs[1])
+		assert.Equal(t, "GFAZPL_USER_IDENTITY_CLIENT_ID=f85aa887-490d-4fac-9306-9b99ad0aa31d", envs[2])
+		assert.Equal(t, "GFAZPL_USER_IDENTITY_CLIENT_SECRET=87808761-ff7b-492e-bb0d-5de2437ffa55", envs[3])
+	})
+
+	t.Run("should not return user identity endpoint settings if user identity not enabled", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			UserIdentityEnabled: false,
+			UserIdentityTokenEndpoint: &TokenEndpointSettings{
+				TokenUrl:     "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
+				ClientId:     "f85aa887-490d-4fac-9306-9b99ad0aa31d",
+				ClientSecret: "87808761-ff7b-492e-bb0d-5de2437ffa55",
+			},
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		assert.Len(t, envs, 0)
+	})
+
+	t.Run("should return assertion if username assertion is set", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			UserIdentityEnabled: true,
+			UserIdentityTokenEndpoint: &TokenEndpointSettings{
+				TokenUrl:          "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
+				ClientId:          "f85aa887-490d-4fac-9306-9b99ad0aa31d",
+				ClientSecret:      "87808761-ff7b-492e-bb0d-5de2437ffa55",
+				UsernameAssertion: true,
+			},
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		assert.Contains(t, envs, "GFAZPL_USER_IDENTITY_ASSERTION=username")
 	})
 }
 
