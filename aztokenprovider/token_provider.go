@@ -19,7 +19,8 @@ type AzureTokenProvider interface {
 	GetAccessToken(ctx context.Context, scopes []string) (string, error)
 }
 
-func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials azcredentials.AzureCredentials) (AzureTokenProvider, error) {
+func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials azcredentials.AzureCredentials,
+	userIdentitySupported bool) (AzureTokenProvider, error) {
 	var err error
 
 	if settings == nil {
@@ -52,6 +53,10 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			tokenRetriever: tokenRetriever,
 		}, nil
 	case *azcredentials.AadCurrentUserCredentials:
+		if !userIdentitySupported {
+			err = fmt.Errorf("user identity authentication is not supported by this datasource")
+			return nil, err
+		}
 		if !settings.UserIdentityEnabled {
 			err = fmt.Errorf("user identity authentication is not enabled in Grafana config")
 			return nil, err

@@ -20,7 +20,7 @@ func AzureMiddleware(authOpts *AuthOptions, credentials azcredentials.AzureCrede
 		if tokenProviderFactory, ok := authOpts.customProviders[credentials.AzureAuthType()]; ok && tokenProviderFactory != nil {
 			tokenProvider, err = tokenProviderFactory(authOpts.settings, credentials)
 		} else {
-			tokenProvider, err = aztokenprovider.NewAzureAccessTokenProvider(authOpts.settings, credentials)
+			tokenProvider, err = aztokenprovider.NewAzureAccessTokenProvider(authOpts.settings, credentials, authOpts.userIdentitySupported)
 		}
 		if err != nil {
 			return errorResponse(err)
