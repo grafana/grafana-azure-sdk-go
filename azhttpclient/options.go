@@ -10,9 +10,10 @@ import (
 type AzureTokenProviderFactory = func(*azsettings.AzureSettings, azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error)
 
 type AuthOptions struct {
-	settings        *azsettings.AzureSettings
-	scopes          []string
-	customProviders map[string]AzureTokenProviderFactory
+	settings              *azsettings.AzureSettings
+	scopes                []string
+	userIdentitySupported bool
+	customProviders       map[string]AzureTokenProviderFactory
 }
 
 func NewAuthOptions(settings *azsettings.AzureSettings) *AuthOptions {
@@ -32,6 +33,10 @@ func (opts *AuthOptions) Scopes(scopes []string) {
 			}
 		}
 	}
+}
+
+func (opts *AuthOptions) AllowUserIdentity() {
+	opts.userIdentitySupported = true
 }
 
 func (opts *AuthOptions) AddTokenProvider(authType string, factory AzureTokenProviderFactory) {
