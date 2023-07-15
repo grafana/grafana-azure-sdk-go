@@ -3,8 +3,6 @@ package azhttpclient
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
 
@@ -12,6 +10,8 @@ import (
 	"github.com/grafana/grafana-azure-sdk-go/azsettings"
 	"github.com/grafana/grafana-azure-sdk-go/aztokenprovider"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAzureMiddleware(t *testing.T) {
@@ -92,6 +92,49 @@ func TestAzureMiddleware(t *testing.T) {
 		_, err = middleware.RoundTrip(req)
 		assert.EqualError(t, err, "invalid Azure configuration: managed identity authentication is not enabled in Grafana config")
 		assert.False(t, testTokenProvider.Called)
+	})
+
+	t.Run("given allowed endpoints configured", func(t *testing.T) {
+		authOpts := NewAuthOptions(azureSettings)
+		authOpts.Scopes([]string{"https://datasource.example.org/.default"})
+		testTokenProvider := &customTokenProvider{}
+		authOpts.AddTokenProvider(azureAuthCustom, func(_ *azsettings.AzureSettings, _ azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error) {
+			return testTokenProvider, nil
+		})
+
+		err := authOpts.AllowedEndpoints([]string{
+			"https://*.example.com",
+		})
+		require.NoError(t, err)
+
+		credentials := &customCredentials{}
+		middleware := AzureMiddleware(authOpts, credentials).CreateMiddleware(clientOpts, next)
+
+		t.Run("should allow endpoint in the allowlist", func(t *testing.T) {
+			req, err := http.NewRequest("GET", "https://test.example.com", nil)
+			require.NoError(t, err)
+
+			resp, err := middleware.RoundTrip(req)
+			require.NoError(t, err)
+			assert.Equal(t, 200, resp.StatusCode)
+			assert.True(t, testTokenProvider.Called)
+		})
+
+		t.Run("should not allow http when https allowed", func(t *testing.T) {
+			req, err := http.NewRequest("GET", "http://test.example.com", nil)
+			require.NoError(t, err)
+
+			_, err = middleware.RoundTrip(req)
+			assert.Error(t, err)
+		})
+
+		t.Run("sould not allow endpoint not in the allowlist", func(t *testing.T) {
+			req, err := http.NewRequest("GET", "https://another.com", nil)
+			require.NoError(t, err)
+
+			_, err = middleware.RoundTrip(req)
+			assert.Error(t, err)
+		})
 	})
 }
 
