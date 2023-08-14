@@ -2,6 +2,7 @@ package azhttpclient
 
 import (
 	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
+	"github.com/grafana/grafana-azure-sdk-go/azhttpclient/internal/azendpoint"
 	"github.com/grafana/grafana-azure-sdk-go/azsettings"
 	"github.com/grafana/grafana-azure-sdk-go/aztokenprovider"
 	sdkhttpclient "github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
@@ -11,6 +12,7 @@ type AzureTokenProviderFactory = func(*azsettings.AzureSettings, azcredentials.A
 
 type AuthOptions struct {
 	settings              *azsettings.AzureSettings
+	endpoints             *azendpoint.EndpointAllowlist
 	scopes                []string
 	userIdentitySupported bool
 	customProviders       map[string]AzureTokenProviderFactory
@@ -33,6 +35,15 @@ func (opts *AuthOptions) Scopes(scopes []string) {
 			}
 		}
 	}
+}
+
+func (opts *AuthOptions) AllowedEndpoints(endpoints []string) error {
+	if allowlist, err := azendpoint.Allowlist(endpoints); err != nil {
+		return err
+	} else {
+		opts.endpoints = allowlist
+	}
+	return nil
 }
 
 func (opts *AuthOptions) AllowUserIdentity() {

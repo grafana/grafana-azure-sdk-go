@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
+	"github.com/grafana/grafana-azure-sdk-go/azhttpclient/internal/azendpoint"
 	"github.com/grafana/grafana-azure-sdk-go/aztokenprovider"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
 )
@@ -31,17 +32,26 @@ func AzureMiddleware(authOpts *AuthOptions, credentials azcredentials.AzureCrede
 			return errorResponse(err)
 		}
 
-		return ApplyAzureAuth(tokenProvider, authOpts.scopes, next)
+		return applyAzureAuth(tokenProvider, authOpts.scopes, authOpts.endpoints, next)
 	})
 }
 
-func ApplyAzureAuth(tokenProvider aztokenprovider.AzureTokenProvider, scopes []string, next http.RoundTripper) http.RoundTripper {
+func applyAzureAuth(tokenProvider aztokenprovider.AzureTokenProvider, scopes []string,
+	endpoints *azendpoint.EndpointAllowlist, next http.RoundTripper) http.RoundTripper {
 	return httpclient.RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		if endpoints != nil {
+			endpoint := azendpoint.Endpoint(*req.URL)
+			if !endpoints.IsAllowed(endpoint) {
+				return nil, fmt.Errorf("request to endpoint '%s' is not allowed by the datasource", endpoint.String())
+			}
+		}
+
 		token, err := tokenProvider.GetAccessToken(req.Context(), scopes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve Azure access token: %w", err)
 		}
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
 		return next.RoundTrip(req)
 	})
 }
