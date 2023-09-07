@@ -7,16 +7,16 @@ import (
 )
 
 const (
-	envAzureCloud = "GFAZPL_AZURE_CLOUD"
+	AzureCloud = "GFAZPL_AZURE_CLOUD"
 
-	envManagedIdentityEnabled  = "GFAZPL_MANAGED_IDENTITY_ENABLED"
-	envManagedIdentityClientId = "GFAZPL_MANAGED_IDENTITY_CLIENT_ID"
+	ManagedIdentityEnabled  = "GFAZPL_MANAGED_IDENTITY_ENABLED"
+	ManagedIdentityClientID = "GFAZPL_MANAGED_IDENTITY_CLIENT_ID"
 
-	envUserIdentityEnabled      = "GFAZPL_USER_IDENTITY_ENABLED"
-	envUserIdentityTokenUrl     = "GFAZPL_USER_IDENTITY_TOKEN_URL"
-	envUserIdentityClientId     = "GFAZPL_USER_IDENTITY_CLIENT_ID"
-	envUserIdentityClientSecret = "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
-	envUserIdentityAssertion    = "GFAZPL_USER_IDENTITY_ASSERTION"
+	UserIdentityEnabled      = "GFAZPL_USER_IDENTITY_ENABLED"
+	UserIdentityTokenURL     = "GFAZPL_USER_IDENTITY_TOKEN_URL"
+	UserIdentityClientID     = "GFAZPL_USER_IDENTITY_CLIENT_ID"
+	UserIdentityClientSecret = "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
+	UserIdentityAssertion    = "GFAZPL_USER_IDENTITY_ASSERTION"
 
 	// Pre Grafana 9.x variables
 	fallbackAzureCloud              = "AZURE_CLOUD"
@@ -27,37 +27,37 @@ const (
 func ReadFromEnv() (*AzureSettings, error) {
 	azureSettings := &AzureSettings{}
 
-	azureSettings.Cloud = envutil.GetOrFallback(envAzureCloud, fallbackAzureCloud, AzurePublic)
+	azureSettings.Cloud = envutil.GetOrFallback(AzureCloud, fallbackAzureCloud, AzurePublic)
 
 	// Managed Identity authentication
-	if msiEnabled, err := envutil.GetBoolOrFallback(envManagedIdentityEnabled, fallbackManagedIdentityEnabled, false); err != nil {
+	if msiEnabled, err := envutil.GetBoolOrFallback(ManagedIdentityEnabled, fallbackManagedIdentityEnabled, false); err != nil {
 		err = fmt.Errorf("invalid Azure configuration: %w", err)
 		return nil, err
 	} else if msiEnabled {
 		azureSettings.ManagedIdentityEnabled = true
-		azureSettings.ManagedIdentityClientId = envutil.GetOrFallback(envManagedIdentityClientId, fallbackManagedIdentityClientId, "")
+		azureSettings.ManagedIdentityClientId = envutil.GetOrFallback(ManagedIdentityClientID, fallbackManagedIdentityClientId, "")
 	}
 
 	// User Identity authentication
-	if userIdentityEnabled, err := envutil.GetBoolOrDefault(envUserIdentityEnabled, false); err != nil {
+	if userIdentityEnabled, err := envutil.GetBoolOrDefault(UserIdentityEnabled, false); err != nil {
 		err = fmt.Errorf("invalid Azure configuration: %w", err)
 		return nil, err
 	} else if userIdentityEnabled {
-		tokenUrl, err := envutil.Get(envUserIdentityTokenUrl)
+		tokenUrl, err := envutil.Get(UserIdentityTokenURL)
 		if err != nil {
 			err = fmt.Errorf("token URL must be set when user identity authentication enabled: %w", err)
 			return nil, err
 		}
 
-		clientId, err := envutil.Get(envUserIdentityClientId)
+		clientId, err := envutil.Get(UserIdentityClientID)
 		if err != nil {
 			err = fmt.Errorf("client ID must be set when user identity authentication enabled: %w", err)
 			return nil, err
 		}
 
-		clientSecret := envutil.GetOrDefault(envUserIdentityClientSecret, "")
+		clientSecret := envutil.GetOrDefault(UserIdentityClientSecret, "")
 
-		assertion := envutil.GetOrDefault(envUserIdentityAssertion, "")
+		assertion := envutil.GetOrDefault(UserIdentityAssertion, "")
 		usernameAssertion := assertion == "username"
 
 		azureSettings.UserIdentityEnabled = true
@@ -77,32 +77,32 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 
 	if azureSettings != nil {
 		if azureSettings.Cloud != "" {
-			envs = append(envs, fmt.Sprintf("%s=%s", envAzureCloud, azureSettings.Cloud))
+			envs = append(envs, fmt.Sprintf("%s=%s", AzureCloud, azureSettings.Cloud))
 		}
 
 		if azureSettings.ManagedIdentityEnabled {
-			envs = append(envs, fmt.Sprintf("%s=true", envManagedIdentityEnabled))
+			envs = append(envs, fmt.Sprintf("%s=true", ManagedIdentityEnabled))
 
 			if azureSettings.ManagedIdentityClientId != "" {
-				envs = append(envs, fmt.Sprintf("%s=%s", envManagedIdentityClientId, azureSettings.ManagedIdentityClientId))
+				envs = append(envs, fmt.Sprintf("%s=%s", ManagedIdentityClientID, azureSettings.ManagedIdentityClientId))
 			}
 		}
 
 		if azureSettings.UserIdentityEnabled {
-			envs = append(envs, fmt.Sprintf("%s=true", envUserIdentityEnabled))
+			envs = append(envs, fmt.Sprintf("%s=true", UserIdentityEnabled))
 
 			if azureSettings.UserIdentityTokenEndpoint != nil {
 				if azureSettings.UserIdentityTokenEndpoint.TokenUrl != "" {
-					envs = append(envs, fmt.Sprintf("%s=%s", envUserIdentityTokenUrl, azureSettings.UserIdentityTokenEndpoint.TokenUrl))
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityTokenURL, azureSettings.UserIdentityTokenEndpoint.TokenUrl))
 				}
 				if azureSettings.UserIdentityTokenEndpoint.ClientId != "" {
-					envs = append(envs, fmt.Sprintf("%s=%s", envUserIdentityClientId, azureSettings.UserIdentityTokenEndpoint.ClientId))
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientID, azureSettings.UserIdentityTokenEndpoint.ClientId))
 				}
 				if azureSettings.UserIdentityTokenEndpoint.ClientSecret != "" {
-					envs = append(envs, fmt.Sprintf("%s=%s", envUserIdentityClientSecret, azureSettings.UserIdentityTokenEndpoint.ClientSecret))
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientSecret, azureSettings.UserIdentityTokenEndpoint.ClientSecret))
 				}
 				if azureSettings.UserIdentityTokenEndpoint.UsernameAssertion {
-					envs = append(envs, fmt.Sprintf("%s=username", envUserIdentityAssertion))
+					envs = append(envs, fmt.Sprintf("%s=username", UserIdentityAssertion))
 				}
 			}
 		}
