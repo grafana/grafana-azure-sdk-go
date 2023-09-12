@@ -43,6 +43,16 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			tokenCache:     azureTokenCache,
 			tokenRetriever: tokenRetriever,
 		}, nil
+	case *azcredentials.AzureWorkloadIdentityCredentials:
+		if !settings.WorkloadIdentityEnabled {
+			err = fmt.Errorf("workload identity authentication is not enabled in Grafana config")
+			return nil, err
+		}
+		tokenRetriever := getWorkloadIdentityTokenRetriever(settings, c)
+		return &serviceTokenProvider{
+			tokenCache:     azureTokenCache,
+			tokenRetriever: tokenRetriever,
+		}, nil
 	case *azcredentials.AzureClientSecretCredentials:
 		tokenRetriever, err := getClientSecretTokenRetriever(c)
 		if err != nil {

@@ -12,6 +12,8 @@ const (
 	ManagedIdentityEnabled  = "GFAZPL_MANAGED_IDENTITY_ENABLED"
 	ManagedIdentityClientID = "GFAZPL_MANAGED_IDENTITY_CLIENT_ID"
 
+	WorkloadIdentityEnabled = "GFAZPL_WORKLOAD_IDENTITY_ENABLED"
+
 	UserIdentityEnabled      = "GFAZPL_USER_IDENTITY_ENABLED"
 	UserIdentityTokenURL     = "GFAZPL_USER_IDENTITY_TOKEN_URL"
 	UserIdentityClientID     = "GFAZPL_USER_IDENTITY_CLIENT_ID"
@@ -36,6 +38,14 @@ func ReadFromEnv() (*AzureSettings, error) {
 	} else if msiEnabled {
 		azureSettings.ManagedIdentityEnabled = true
 		azureSettings.ManagedIdentityClientId = envutil.GetOrFallback(ManagedIdentityClientID, fallbackManagedIdentityClientId, "")
+	}
+
+	// Workload Identity authentication
+	if wiEnabled, err := envutil.GetBoolOrDefault(WorkloadIdentityEnabled, false); err != nil {
+		err = fmt.Errorf("invalid Azure configuration: %w", err)
+		return nil, err
+	} else if wiEnabled {
+		azureSettings.WorkloadIdentityEnabled = true
 	}
 
 	// User Identity authentication
@@ -86,6 +96,10 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 			if azureSettings.ManagedIdentityClientId != "" {
 				envs = append(envs, fmt.Sprintf("%s=%s", ManagedIdentityClientID, azureSettings.ManagedIdentityClientId))
 			}
+		}
+
+		if azureSettings.WorkloadIdentityEnabled {
+			envs = append(envs, fmt.Sprintf("%s=true", WorkloadIdentityEnabled))
 		}
 
 		if azureSettings.UserIdentityEnabled {

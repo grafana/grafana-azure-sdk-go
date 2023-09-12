@@ -132,6 +132,28 @@ func TestReadFromEnv(t *testing.T) {
 		assert.Equal(t, "", azureSettings.ManagedIdentityClientId)
 	})
 
+	t.Run("should enable workload identity if variable is set", func(t *testing.T) {
+		unset, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "true")
+		require.NoError(t, err)
+		defer unset()
+
+		azureSettings, err := ReadFromEnv()
+		require.NoError(t, err)
+
+		assert.True(t, azureSettings.WorkloadIdentityEnabled)
+	})
+
+	t.Run("should disable workload identity if variable is not set", func(t *testing.T) {
+		unset, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "")
+		require.NoError(t, err)
+		defer unset()
+
+		azureSettings, err := ReadFromEnv()
+		require.NoError(t, err)
+
+		assert.False(t, azureSettings.WorkloadIdentityEnabled)
+	})
+
 	t.Run("when user identity enabled", func(t *testing.T) {
 		unset, err := setEnvVar("GFAZPL_USER_IDENTITY_ENABLED", "true")
 		require.NoError(t, err)
@@ -277,6 +299,17 @@ func TestWriteToEnvStr(t *testing.T) {
 		envs := WriteToEnvStr(azureSettings)
 
 		assert.Len(t, envs, 0)
+	})
+
+	t.Run("should return workload identity set if enabled", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			WorkloadIdentityEnabled: true,
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		require.Len(t, envs, 1)
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ENABLED=true", envs[0])
 	})
 
 	t.Run("should return user identity set if enabled", func(t *testing.T) {

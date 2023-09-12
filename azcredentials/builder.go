@@ -31,6 +31,10 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		credentials := &AzureManagedIdentityCredentials{}
 		return credentials, nil
 
+	case AzureAuthWorkloadIdentity:
+		credentials := &AzureWorkloadIdentityCredentials{}
+		return credentials, nil
+
 	case AzureAuthClientSecret:
 		cloud, err := maputil.GetString(credentialsObj, "azureCloud")
 		if err != nil {

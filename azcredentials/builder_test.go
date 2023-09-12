@@ -53,6 +53,21 @@ func TestFromDatasourceData(t *testing.T) {
 		assert.Equal(t, credential.ClientId, "")
 	})
 
+	t.Run("should return workload identity credentials when workload identity auth configured", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType": "wi",
+			},
+		}
+		var secureData = map[string]string{}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		assert.IsType(t, &AzureWorkloadIdentityCredentials{}, result)
+	})
+
 	t.Run("should return client secret credentials when client secret auth configured", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{

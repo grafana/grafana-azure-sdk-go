@@ -5,6 +5,8 @@ type AzureSettings struct {
 	ManagedIdentityEnabled  bool
 	ManagedIdentityClientId string
 
+	WorkloadIdentityEnabled bool
+
 	UserIdentityEnabled       bool
 	UserIdentityTokenEndpoint *TokenEndpointSettings
 }
