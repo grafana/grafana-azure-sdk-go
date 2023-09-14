@@ -223,9 +223,9 @@ func TestReadFromEnv(t *testing.T) {
 
 func TestWriteToEnvStr(t *testing.T) {
 	defer func() {
-		_ = os.Unsetenv(envAzureCloud)
-		_ = os.Unsetenv(envManagedIdentityEnabled)
-		_ = os.Unsetenv(envManagedIdentityClientId)
+		_ = os.Unsetenv(AzureCloud)
+		_ = os.Unsetenv(ManagedIdentityEnabled)
+		_ = os.Unsetenv(ManagedIdentityClientID)
 	}()
 
 	t.Run("should return empty list if AzureSettings not set", func(t *testing.T) {
