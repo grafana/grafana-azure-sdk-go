@@ -67,7 +67,7 @@ func applyAzureAuth(tokenProvider aztokenprovider.AzureTokenProvider, sessionPro
 			if err != nil {
 				return nil, fmt.Errorf("failed to obtain user session: %w", err)
 			} else if sessionId != "" {
-				req.Header.Set("X-RateLimit-Session", sessionId)
+				req.Header.Set("x-ms-ratelimit-id", sessionId)
 			}
 		}
 
