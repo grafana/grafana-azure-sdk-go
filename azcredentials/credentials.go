@@ -3,7 +3,7 @@ package azcredentials
 const (
 	AzureAuthCurrentUserIdentity = "currentuser"
 	AzureAuthManagedIdentity     = "msi"
-	AzureAuthWorkloadIdentity    = "wi"
+	AzureAuthWorkloadIdentity    = "workloadidentity"
 	AzureAuthClientSecret        = "clientsecret"
 	AzureAuthClientSecretObo     = "clientsecret-obo"
 )

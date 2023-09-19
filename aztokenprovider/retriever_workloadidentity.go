@@ -12,45 +12,53 @@ import (
 )
 
 type workloadIdentityTokenRetriever struct {
-	tenantId   string
-	clientId   string
-	credential azcore.TokenCredential
+	tenantId      string
+	clientId      string
+	tokenFilePath string
+	credential    azcore.TokenCredential
 }
 
 func getWorkloadIdentityTokenRetriever(settings *azsettings.AzureSettings, credentials *azcredentials.AzureWorkloadIdentityCredentials) TokenRetriever {
-	var tenantId, clientId string
-	// TODO: See https://azure.github.io/azure-workload-identity/docs/faq.html#how-to-federate-multiple-identities-with-a-kubernetes-service-account
-	// if credentials.ClientId != "" {
-	// 	clientId = credentials.ClientId
-	// } else {
-	// 	clientId = settings.ManagedIdentityClientId
-	// }
-	tenantId = ""
-	clientId = ""
+	tenantId := ""
+	clientId := ""
+	tokenFilePath := ""
+
+	if settings.WorkloadIdentitySettings != nil {
+		tenantId = settings.WorkloadIdentitySettings.TenantId
+		clientId = settings.WorkloadIdentitySettings.ClientId
+		tokenFilePath = settings.WorkloadIdentitySettings.TokenFilePath
+	}
 
 	return &workloadIdentityTokenRetriever{
-		tenantId: tenantId,
-		clientId: clientId,
+		tenantId:      tenantId,
+		clientId:      clientId,
+		tokenFilePath: tokenFilePath,
 	}
 }
 
 func (c *workloadIdentityTokenRetriever) GetCacheKey() string {
-	// TODO: Review the caching key
+	tenantId := c.tenantId
+	if tenantId == "" {
+		tenantId = "default"
+	}
 	clientId := c.clientId
 	if clientId == "" {
-		clientId = "system"
+		clientId = "default"
 	}
-	return fmt.Sprintf("azure|wi|%s", clientId)
+
+	return fmt.Sprintf("azure|wi|%s|%s", tenantId, clientId)
 }
 
 func (c *workloadIdentityTokenRetriever) Init() error {
 	options := &azidentity.WorkloadIdentityCredentialOptions{}
-	// TODO: See https://azure.github.io/azure-workload-identity/docs/faq.html#how-to-federate-multiple-identities-with-a-kubernetes-service-account
 	if c.tenantId != "" {
 		options.TenantID = c.tenantId
 	}
 	if c.clientId != "" {
 		options.ClientID = c.clientId
+	}
+	if c.tokenFilePath != "" {
+		options.TokenFilePath = c.tokenFilePath
 	}
 
 	credential, err := azidentity.NewWorkloadIdentityCredential(options)

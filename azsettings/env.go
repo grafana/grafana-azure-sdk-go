@@ -46,6 +46,8 @@ func ReadFromEnv() (*AzureSettings, error) {
 		return nil, err
 	} else if wiEnabled {
 		azureSettings.WorkloadIdentityEnabled = true
+
+		// TODO: Initialize WorkloadIdentitySettings
 	}
 
 	// User Identity authentication
@@ -100,6 +102,8 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 
 		if azureSettings.WorkloadIdentityEnabled {
 			envs = append(envs, fmt.Sprintf("%s=true", WorkloadIdentityEnabled))
+
+			// TODO: Include WorkloadIdentitySettings
 		}
 
 		if azureSettings.UserIdentityEnabled {
