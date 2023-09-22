@@ -12,27 +12,27 @@ import (
 )
 
 type workloadIdentityTokenRetriever struct {
-	tenantId      string
-	clientId      string
-	tokenFilePath string
-	credential    azcore.TokenCredential
+	tenantId   string
+	clientId   string
+	tokenFile  string
+	credential azcore.TokenCredential
 }
 
 func getWorkloadIdentityTokenRetriever(settings *azsettings.AzureSettings, credentials *azcredentials.AzureWorkloadIdentityCredentials) TokenRetriever {
 	tenantId := ""
 	clientId := ""
-	tokenFilePath := ""
+	tokenFile := ""
 
 	if settings.WorkloadIdentitySettings != nil {
 		tenantId = settings.WorkloadIdentitySettings.TenantId
 		clientId = settings.WorkloadIdentitySettings.ClientId
-		tokenFilePath = settings.WorkloadIdentitySettings.TokenFilePath
+		tokenFile = settings.WorkloadIdentitySettings.TokenFile
 	}
 
 	return &workloadIdentityTokenRetriever{
-		tenantId:      tenantId,
-		clientId:      clientId,
-		tokenFilePath: tokenFilePath,
+		tenantId:  tenantId,
+		clientId:  clientId,
+		tokenFile: tokenFile,
 	}
 }
 
@@ -57,8 +57,8 @@ func (c *workloadIdentityTokenRetriever) Init() error {
 	if c.clientId != "" {
 		options.ClientID = c.clientId
 	}
-	if c.tokenFilePath != "" {
-		options.TokenFilePath = c.tokenFilePath
+	if c.tokenFile != "" {
+		options.TokenFilePath = c.tokenFile
 	}
 
 	credential, err := azidentity.NewWorkloadIdentityCredential(options)

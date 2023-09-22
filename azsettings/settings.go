@@ -13,9 +13,9 @@ type AzureSettings struct {
 }
 
 type WorkloadIdentitySettings struct {
-	TenantId      string
-	ClientId      string
-	TokenFilePath string
+	TenantId  string
+	ClientId  string
+	TokenFile string
 }
 
 type TokenEndpointSettings struct {

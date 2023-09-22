@@ -12,7 +12,10 @@ const (
 	ManagedIdentityEnabled  = "GFAZPL_MANAGED_IDENTITY_ENABLED"
 	ManagedIdentityClientID = "GFAZPL_MANAGED_IDENTITY_CLIENT_ID"
 
-	WorkloadIdentityEnabled = "GFAZPL_WORKLOAD_IDENTITY_ENABLED"
+	WorkloadIdentityEnabled   = "GFAZPL_WORKLOAD_IDENTITY_ENABLED"
+	WorkloadIdentityTenantID  = "GFAZPL_WORKLOAD_IDENTITY_TENANT_ID"
+	WorkloadIdentityClientID  = "GFAZPL_WORKLOAD_IDENTITY_CLIENT_ID"
+	WorkloadIdentityTokenFile = "GFAZPL_WORKLOAD_IDENTITY_TOKEN_FILE"
 
 	UserIdentityEnabled      = "GFAZPL_USER_IDENTITY_ENABLED"
 	UserIdentityTokenURL     = "GFAZPL_USER_IDENTITY_TOKEN_URL"
@@ -47,7 +50,11 @@ func ReadFromEnv() (*AzureSettings, error) {
 	} else if wiEnabled {
 		azureSettings.WorkloadIdentityEnabled = true
 
-		// TODO: Initialize WorkloadIdentitySettings
+		wiSettings := &WorkloadIdentitySettings{}
+		wiSettings.TenantId = envutil.GetOrDefault(WorkloadIdentityTenantID, "")
+		wiSettings.ClientId = envutil.GetOrDefault(WorkloadIdentityClientID, "")
+		wiSettings.TokenFile = envutil.GetOrDefault(WorkloadIdentityTokenFile, "")
+		azureSettings.WorkloadIdentitySettings = wiSettings
 	}
 
 	// User Identity authentication
@@ -103,23 +110,33 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 		if azureSettings.WorkloadIdentityEnabled {
 			envs = append(envs, fmt.Sprintf("%s=true", WorkloadIdentityEnabled))
 
-			// TODO: Include WorkloadIdentitySettings
+			if wiSettings := azureSettings.WorkloadIdentitySettings; wiSettings != nil {
+				if wiSettings.TenantId != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityTenantID, wiSettings.TenantId))
+				}
+				if wiSettings.ClientId != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityClientID, wiSettings.ClientId))
+				}
+				if wiSettings.TokenFile != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityTokenFile, wiSettings.TokenFile))
+				}
+			}
 		}
 
 		if azureSettings.UserIdentityEnabled {
 			envs = append(envs, fmt.Sprintf("%s=true", UserIdentityEnabled))
 
-			if azureSettings.UserIdentityTokenEndpoint != nil {
-				if azureSettings.UserIdentityTokenEndpoint.TokenUrl != "" {
-					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityTokenURL, azureSettings.UserIdentityTokenEndpoint.TokenUrl))
+			if tokenEndpoint := azureSettings.UserIdentityTokenEndpoint; tokenEndpoint != nil {
+				if tokenEndpoint.TokenUrl != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityTokenURL, tokenEndpoint.TokenUrl))
 				}
-				if azureSettings.UserIdentityTokenEndpoint.ClientId != "" {
-					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientID, azureSettings.UserIdentityTokenEndpoint.ClientId))
+				if tokenEndpoint.ClientId != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientID, tokenEndpoint.ClientId))
 				}
-				if azureSettings.UserIdentityTokenEndpoint.ClientSecret != "" {
-					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientSecret, azureSettings.UserIdentityTokenEndpoint.ClientSecret))
+				if tokenEndpoint.ClientSecret != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientSecret, tokenEndpoint.ClientSecret))
 				}
-				if azureSettings.UserIdentityTokenEndpoint.UsernameAssertion {
+				if tokenEndpoint.UsernameAssertion {
 					envs = append(envs, fmt.Sprintf("%s=username", UserIdentityAssertion))
 				}
 			}
