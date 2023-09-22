@@ -5,8 +5,17 @@ type AzureSettings struct {
 	ManagedIdentityEnabled  bool
 	ManagedIdentityClientId string
 
+	WorkloadIdentityEnabled  bool
+	WorkloadIdentitySettings *WorkloadIdentitySettings
+
 	UserIdentityEnabled       bool
 	UserIdentityTokenEndpoint *TokenEndpointSettings
+}
+
+type WorkloadIdentitySettings struct {
+	TenantId  string
+	ClientId  string
+	TokenFile string
 }
 
 type TokenEndpointSettings struct {

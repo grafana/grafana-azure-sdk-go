@@ -48,88 +48,207 @@ func TestReadFromEnv(t *testing.T) {
 		assert.Equal(t, AzurePublic, azureSettings.Cloud)
 	})
 
-	t.Run("should enable managed identity if variable is set", func(t *testing.T) {
-		unset, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
-		require.NoError(t, err)
-		defer unset()
+	t.Run("managed identity", func(t *testing.T) {
+		t.Run("should enable managed identity if variable is set", func(t *testing.T) {
+			unset, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
+			require.NoError(t, err)
+			defer unset()
 
-		azureSettings, err := ReadFromEnv()
-		require.NoError(t, err)
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
 
-		assert.True(t, azureSettings.ManagedIdentityEnabled)
+			assert.True(t, azureSettings.ManagedIdentityEnabled)
+		})
+
+		t.Run("should enable managed identity if fallback variable is set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("AZURE_MANAGED_IDENTITY_ENABLED", "true")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			assert.True(t, azureSettings.ManagedIdentityEnabled)
+		})
+
+		t.Run("should disable managed identity if variable is not set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("AZURE_MANAGED_IDENTITY_ENABLED", "")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			assert.False(t, azureSettings.ManagedIdentityEnabled)
+		})
+
+		t.Run("should set client ID if variable is set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			assert.Equal(t, "TestClientId", azureSettings.ManagedIdentityClientId)
+		})
+
+		t.Run("should set client ID if fallback variable is set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "")
+			require.NoError(t, err)
+			defer unset2()
+			unset3, err := setEnvVar("AZURE_MANAGED_IDENTITY_CLIENT_ID", "FallbackClientId")
+			require.NoError(t, err)
+			defer unset3()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			assert.Equal(t, "FallbackClientId", azureSettings.ManagedIdentityClientId)
+		})
+
+		t.Run("should not set client ID if managed identity is not enabled", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "false")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			assert.Equal(t, "", azureSettings.ManagedIdentityClientId)
+		})
 	})
 
-	t.Run("should enable managed identity if fallback variable is set", func(t *testing.T) {
-		unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "")
-		require.NoError(t, err)
-		defer unset1()
-		unset2, err := setEnvVar("AZURE_MANAGED_IDENTITY_ENABLED", "true")
-		require.NoError(t, err)
-		defer unset2()
+	t.Run("workload identity", func(t *testing.T) {
+		t.Run("should enable workload identity if variable is set", func(t *testing.T) {
+			unset, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "true")
+			require.NoError(t, err)
+			defer unset()
 
-		azureSettings, err := ReadFromEnv()
-		require.NoError(t, err)
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
 
-		assert.True(t, azureSettings.ManagedIdentityEnabled)
-	})
+			assert.True(t, azureSettings.WorkloadIdentityEnabled)
+		})
 
-	t.Run("should disable managed identity if variable is not set", func(t *testing.T) {
-		unset1, err := setEnvVar("GFAZPL_AZURE_MANAGED_IDENTITY_ENABLED", "")
-		require.NoError(t, err)
-		defer unset1()
-		unset2, err := setEnvVar("AZURE_MANAGED_IDENTITY_ENABLED", "")
-		require.NoError(t, err)
-		defer unset2()
+		t.Run("should disable workload identity if variable is not set", func(t *testing.T) {
+			unset, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "")
+			require.NoError(t, err)
+			defer unset()
 
-		azureSettings, err := ReadFromEnv()
-		require.NoError(t, err)
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
 
-		assert.False(t, azureSettings.ManagedIdentityEnabled)
-	})
+			assert.False(t, azureSettings.WorkloadIdentityEnabled)
+		})
 
-	t.Run("should set client ID if variable is set", func(t *testing.T) {
-		unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
-		require.NoError(t, err)
-		defer unset1()
-		unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
-		require.NoError(t, err)
-		defer unset2()
+		t.Run("should set tenant ID if variable is set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "true")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_TENANT_ID", "ba556b7e")
+			require.NoError(t, err)
+			defer unset2()
 
-		azureSettings, err := ReadFromEnv()
-		require.NoError(t, err)
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
 
-		assert.Equal(t, "TestClientId", azureSettings.ManagedIdentityClientId)
-	})
+			assert.NotNil(t, azureSettings.WorkloadIdentitySettings)
+			assert.Equal(t, "ba556b7e", azureSettings.WorkloadIdentitySettings.TenantId)
+		})
 
-	t.Run("should set client ID if fallback variable is set", func(t *testing.T) {
-		unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "true")
-		require.NoError(t, err)
-		defer unset1()
-		unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "")
-		require.NoError(t, err)
-		defer unset2()
-		unset3, err := setEnvVar("AZURE_MANAGED_IDENTITY_CLIENT_ID", "FallbackClientId")
-		require.NoError(t, err)
-		defer unset3()
+		t.Run("should not set tenant ID if workload identity is not enabled", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "false")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_TENANT_ID", "ba556b7e")
+			require.NoError(t, err)
+			defer unset2()
 
-		azureSettings, err := ReadFromEnv()
-		require.NoError(t, err)
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
 
-		assert.Equal(t, "FallbackClientId", azureSettings.ManagedIdentityClientId)
-	})
+			if azureSettings.WorkloadIdentitySettings != nil {
+				assert.Equal(t, "", azureSettings.WorkloadIdentitySettings.TenantId)
+			}
+		})
 
-	t.Run("should not set client ID if managed identity is not enabled", func(t *testing.T) {
-		unset1, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_ENABLED", "false")
-		require.NoError(t, err)
-		defer unset1()
-		unset2, err := setEnvVar("GFAZPL_MANAGED_IDENTITY_CLIENT_ID", "TestClientId")
-		require.NoError(t, err)
-		defer unset2()
+		t.Run("should set client ID if variable is set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "true")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_CLIENT_ID", "547121e7")
+			require.NoError(t, err)
+			defer unset2()
 
-		azureSettings, err := ReadFromEnv()
-		require.NoError(t, err)
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
 
-		assert.Equal(t, "", azureSettings.ManagedIdentityClientId)
+			assert.NotNil(t, azureSettings.WorkloadIdentitySettings)
+			assert.Equal(t, "547121e7", azureSettings.WorkloadIdentitySettings.ClientId)
+		})
+
+		t.Run("should not set client ID if workload identity is not enabled", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "false")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_CLIENT_ID", "547121e7")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			if azureSettings.WorkloadIdentitySettings != nil {
+				assert.Equal(t, "", azureSettings.WorkloadIdentitySettings.ClientId)
+			}
+		})
+
+		t.Run("should set token file if variable is set", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "true")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_TOKEN_FILE", "/var/test-token")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			assert.NotNil(t, azureSettings.WorkloadIdentitySettings)
+			assert.Equal(t, "/var/test-token", azureSettings.WorkloadIdentitySettings.TokenFile)
+		})
+
+		t.Run("should not set token file if workload identity is not enabled", func(t *testing.T) {
+			unset1, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_ENABLED", "false")
+			require.NoError(t, err)
+			defer unset1()
+			unset2, err := setEnvVar("GFAZPL_WORKLOAD_IDENTITY_TOKEN_FILE", "/var/test-token")
+			require.NoError(t, err)
+			defer unset2()
+
+			azureSettings, err := ReadFromEnv()
+			require.NoError(t, err)
+
+			if azureSettings.WorkloadIdentitySettings != nil {
+				assert.Equal(t, "", azureSettings.WorkloadIdentitySettings.TokenFile)
+			}
+		})
 	})
 
 	t.Run("when user identity enabled", func(t *testing.T) {
@@ -277,6 +396,62 @@ func TestWriteToEnvStr(t *testing.T) {
 		envs := WriteToEnvStr(azureSettings)
 
 		assert.Len(t, envs, 0)
+	})
+
+	t.Run("should return workload identity set if enabled", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			WorkloadIdentityEnabled: true,
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		require.Len(t, envs, 1)
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ENABLED=true", envs[0])
+	})
+
+	t.Run("should return workload identity tenant ID if provided", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			WorkloadIdentityEnabled: true,
+			WorkloadIdentitySettings: &WorkloadIdentitySettings{
+				TenantId: "ba556b7e",
+			},
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		require.Len(t, envs, 2)
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ENABLED=true", envs[0])
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_TENANT_ID=ba556b7e", envs[1])
+	})
+
+	t.Run("should return workload identity client ID if provided", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			WorkloadIdentityEnabled: true,
+			WorkloadIdentitySettings: &WorkloadIdentitySettings{
+				ClientId: "547121e7",
+			},
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		require.Len(t, envs, 2)
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ENABLED=true", envs[0])
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_CLIENT_ID=547121e7", envs[1])
+	})
+
+	t.Run("should return workload identity token file if provided", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			WorkloadIdentityEnabled: true,
+			WorkloadIdentitySettings: &WorkloadIdentitySettings{
+				TokenFile: "/var/test-token",
+			},
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		require.Len(t, envs, 2)
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ENABLED=true", envs[0])
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_TOKEN_FILE=/var/test-token", envs[1])
 	})
 
 	t.Run("should return user identity set if enabled", func(t *testing.T) {
