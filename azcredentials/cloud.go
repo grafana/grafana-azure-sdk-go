@@ -14,6 +14,9 @@ func GetAzureCloud(settings *azsettings.AzureSettings, credentials AzureCredenti
 	case *AzureManagedIdentityCredentials:
 		// In case of managed identity, the cloud is always same as where Grafana is hosted
 		return settings.GetDefaultCloud(), nil
+	case *AzureWorkloadIdentityCredentials:
+		// In case of workload identity, the cloud is always same as where Grafana is hosted
+		return settings.GetDefaultCloud(), nil
 	case *AzureClientSecretCredentials:
 		return c.AzureCloud, nil
 	case *AzureClientSecretOboCredentials:
