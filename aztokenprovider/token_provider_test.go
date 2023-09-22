@@ -51,21 +51,6 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 			_, err = provider.GetAccessToken(ctx, scopes)
 			require.NoError(t, err)
 		})
-
-		t.Run("should resolve client secret retriever if auth type is client secret", func(t *testing.T) {
-			credentials := &azcredentials.AzureClientSecretCredentials{AzureCloud: azsettings.AzurePublic}
-
-			provider, err := NewAzureAccessTokenProvider(settings, credentials, false)
-			require.NoError(t, err)
-			require.IsType(t, &serviceTokenProvider{}, provider)
-
-			getAccessTokenFunc = func(credential TokenRetriever, scopes []string) {
-				assert.IsType(t, &clientSecretTokenRetriever{}, credential)
-			}
-
-			_, err = provider.GetAccessToken(ctx, scopes)
-			require.NoError(t, err)
-		})
 	})
 
 	t.Run("when managed identities disabled", func(t *testing.T) {
@@ -77,6 +62,51 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 			_, err := NewAzureAccessTokenProvider(settings, credentials, false)
 			assert.Error(t, err, "managed identity authentication is not enabled in Grafana config")
 		})
+	})
+
+	t.Run("when workload identities enabled", func(t *testing.T) {
+		settings.WorkloadIdentityEnabled = true
+
+		t.Run("should resolve workload identity retriever if auth type is workload identity", func(t *testing.T) {
+			credentials := &azcredentials.AzureWorkloadIdentityCredentials{}
+
+			provider, err := NewAzureAccessTokenProvider(settings, credentials, false)
+			require.NoError(t, err)
+			require.IsType(t, &serviceTokenProvider{}, provider)
+
+			getAccessTokenFunc = func(credential TokenRetriever, scopes []string) {
+				assert.IsType(t, &workloadIdentityTokenRetriever{}, credential)
+			}
+
+			_, err = provider.GetAccessToken(ctx, scopes)
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("when workload identities disabled", func(t *testing.T) {
+		settings.WorkloadIdentityEnabled = false
+
+		t.Run("should return error if auth type is workload identity", func(t *testing.T) {
+			credentials := &azcredentials.AzureWorkloadIdentityCredentials{}
+
+			_, err := NewAzureAccessTokenProvider(settings, credentials, false)
+			assert.Error(t, err, "workload identity authentication is not enabled in Grafana config")
+		})
+	})
+
+	t.Run("should resolve client secret retriever if auth type is client secret", func(t *testing.T) {
+		credentials := &azcredentials.AzureClientSecretCredentials{AzureCloud: azsettings.AzurePublic}
+
+		provider, err := NewAzureAccessTokenProvider(settings, credentials, false)
+		require.NoError(t, err)
+		require.IsType(t, &serviceTokenProvider{}, provider)
+
+		getAccessTokenFunc = func(credential TokenRetriever, scopes []string) {
+			assert.IsType(t, &clientSecretTokenRetriever{}, credential)
+		}
+
+		_, err = provider.GetAccessToken(ctx, scopes)
+		require.NoError(t, err)
 	})
 }
 

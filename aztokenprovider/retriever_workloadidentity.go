@@ -23,10 +23,10 @@ func getWorkloadIdentityTokenRetriever(settings *azsettings.AzureSettings, crede
 	clientId := ""
 	tokenFile := ""
 
-	if settings.WorkloadIdentitySettings != nil {
-		tenantId = settings.WorkloadIdentitySettings.TenantId
-		clientId = settings.WorkloadIdentitySettings.ClientId
-		tokenFile = settings.WorkloadIdentitySettings.TokenFile
+	if wiSettings := settings.WorkloadIdentitySettings; wiSettings != nil {
+		tenantId = wiSettings.TenantId
+		clientId = wiSettings.ClientId
+		tokenFile = wiSettings.TokenFile
 	}
 
 	return &workloadIdentityTokenRetriever{

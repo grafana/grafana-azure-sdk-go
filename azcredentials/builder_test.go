@@ -56,7 +56,7 @@ func TestFromDatasourceData(t *testing.T) {
 	t.Run("should return workload identity credentials when workload identity auth configured", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
-				"authType": "wi",
+				"authType": "workloadidentity",
 			},
 		}
 		var secureData = map[string]string{}
