@@ -3,7 +3,7 @@ module github.com/grafana/grafana-azure-sdk-go
 go 1.18
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.1
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.2
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0
 	github.com/grafana/grafana-plugin-sdk-go v0.147.0
 	github.com/stretchr/testify v1.8.1
