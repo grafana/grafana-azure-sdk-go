@@ -20,7 +20,7 @@ type fakeRetriever struct {
 	getAccessTokenFunc func(ctx context.Context, scopes []string) (*AccessToken, error)
 }
 
-func (c *fakeRetriever) GetCacheKey(multiTenantID string) string {
+func (c *fakeRetriever) GetCacheKey(grafanaMultiTenantId string) string {
 	return c.key
 }
 

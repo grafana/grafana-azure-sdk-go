@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const tenantKey = "tenantID"
+const grafanaTenantId = "tenantID"
 
 var (
 	// timeNow makes it possible to test usage of time
@@ -196,7 +196,7 @@ func returnGrafanaMultiTenantId(ctx context.Context) (grafanaMultiTenantId strin
 	md, exists := metadata.FromIncomingContext(ctx)
 
 	if exists {
-		tid := md.Get(tenantKey)
+		tid := md.Get(grafanaTenantId)
 		if len(tid) > 0 && tid[0] != "" {
 			grafanaMultiTenantId = tid[0]
 		}
