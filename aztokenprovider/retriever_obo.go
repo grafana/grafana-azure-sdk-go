@@ -11,8 +11,8 @@ type onBehalfOfTokenRetriever struct {
 	idToken string
 }
 
-func (r *onBehalfOfTokenRetriever) GetCacheKey() string {
-	return fmt.Sprintf("currentuser|idtoken|%s", r.userId)
+func (r *onBehalfOfTokenRetriever) GetCacheKey(multiTenantID string) string {
+	return fmt.Sprintf("currentuser|idtoken|%s|%s", r.userId, multiTenantID)
 }
 
 func (r *onBehalfOfTokenRetriever) Init() error {

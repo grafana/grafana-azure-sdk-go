@@ -40,8 +40,8 @@ func getClientSecretTokenRetriever(credentials *azcredentials.AzureClientSecretC
 	}, nil
 }
 
-func (c *clientSecretTokenRetriever) GetCacheKey() string {
-	return fmt.Sprintf("azure|clientsecret|%s|%s|%s|%s", c.cloudConf.ActiveDirectoryAuthorityHost, c.tenantId, c.clientId, hashSecret(c.clientSecret))
+func (c *clientSecretTokenRetriever) GetCacheKey(multiTenantID string) string {
+	return fmt.Sprintf("azure|clientsecret|%s|%s|%s|%s|%s", c.cloudConf.ActiveDirectoryAuthorityHost, c.tenantId, c.clientId, hashSecret(c.clientSecret), multiTenantID)
 }
 
 func (c *clientSecretTokenRetriever) Init() error {

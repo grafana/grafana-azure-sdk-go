@@ -11,6 +11,7 @@ Common Azure configuration.
 ### azcredentials
 
 The built-in `AzureCredentials`:
+
 - `AadCurrentUserCredentials`
 - `AzureManagedIdentityCredentials`
 - `AzureClientSecretCredentials`
@@ -46,16 +47,18 @@ httpClient, err := httpclient.NewProvider().New(clientOpts)
 Context object `CurrentUserContext` of the currently signed-in Grafana user which can be passed
 via context between business layers.
 
-Used by token provider to get information about the current user for user identity authentication. 
+Used by token provider to get information about the current user for user identity authentication.
 
 Read/write functions:
+
 - `context = azusercontext.WithCurrentUser(context, currentUser)` extends given context with information about the current user.
-- `currentUser = azusercontext..GetCurrentUser(context)` extracts current user from the given context
+- `currentUser = azusercontext.GetCurrentUser(context)` extracts current user from the given context
 
 Helper functions for datasource requests:
-- `WithUserFromQueryReq` extracts current user from query request and adds to context. 
+
+- `WithUserFromQueryReq` extracts current user from query request and adds to context.
 - `WithUserFromResourceReq` extracts current user from resource call and adds to context.
-- `WithUserFromHealthCheckReq` extracts current from health check request and adds to context. 
+- `WithUserFromHealthCheckReq` extracts current from health check request and adds to context.
 
 ### aztokenprovider
 
