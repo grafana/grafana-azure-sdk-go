@@ -36,7 +36,7 @@ func getWorkloadIdentityTokenRetriever(settings *azsettings.AzureSettings, crede
 	}
 }
 
-func (c *workloadIdentityTokenRetriever) GetCacheKey(multiTenantID string) string {
+func (c *workloadIdentityTokenRetriever) GetCacheKey(grafanaMultiTenantId string) string {
 	tenantId := c.tenantId
 	if tenantId == "" {
 		tenantId = "default"
@@ -46,7 +46,7 @@ func (c *workloadIdentityTokenRetriever) GetCacheKey(multiTenantID string) strin
 		clientId = "default"
 	}
 
-	return fmt.Sprintf("azure|wi|%s|%s|%s", tenantId, clientId, multiTenantID)
+	return fmt.Sprintf("azure|wi|%s|%s|%s", tenantId, clientId, grafanaMultiTenantId)
 }
 
 func (c *workloadIdentityTokenRetriever) Init() error {

@@ -24,7 +24,7 @@ type AccessToken struct {
 }
 
 type TokenRetriever interface {
-	GetCacheKey(multiTenantID string) string
+	GetCacheKey(grafanaMultiTenantId string) string
 	Init() error
 	GetAccessToken(ctx context.Context, scopes []string) (*AccessToken, error)
 }
@@ -64,7 +64,7 @@ func (c *tokenCacheImpl) GetAccessToken(ctx context.Context, tokenRetriever Toke
 func (c *tokenCacheImpl) getEntryFor(ctx context.Context, credential TokenRetriever) *credentialCacheEntry {
 	var entry interface{}
 	var ok bool
-	tid := returnMultiTenantId(ctx)
+	tid := returnGrafanaMultiTenantId(ctx)
 
 	key := credential.GetCacheKey(tid)
 	if entry, ok = c.cache.Load(key); !ok {
@@ -192,15 +192,15 @@ func getKeyForScopes(scopes []string) string {
 	return strings.Join(scopes, " ")
 }
 
-func returnMultiTenantId(ctx context.Context) (multiTenantId string) {
+func returnGrafanaMultiTenantId(ctx context.Context) (grafanaMultiTenantId string) {
 	md, exists := metadata.FromIncomingContext(ctx)
 
 	if exists {
 		tid := md.Get(tenantKey)
 		if len(tid) > 0 && tid[0] != "" {
-			multiTenantId = tid[0]
+			grafanaMultiTenantId = tid[0]
 		}
 	}
 
-	return multiTenantId
+	return grafanaMultiTenantId
 }

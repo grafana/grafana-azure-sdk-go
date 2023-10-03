@@ -10,8 +10,8 @@ type usernameTokenRetriever struct {
 	username string
 }
 
-func (r *usernameTokenRetriever) GetCacheKey(multiTenantID string) string {
-	return fmt.Sprintf("currentuser|username|%s|%s", r.username, multiTenantID)
+func (r *usernameTokenRetriever) GetCacheKey(grafanaMultiTenantId string) string {
+	return fmt.Sprintf("currentuser|username|%s|%s", r.username, grafanaMultiTenantId)
 }
 
 func (r *usernameTokenRetriever) Init() error {
