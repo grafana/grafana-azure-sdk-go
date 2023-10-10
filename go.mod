@@ -7,6 +7,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.1
 	github.com/grafana/grafana-plugin-sdk-go v0.179.0
 	github.com/stretchr/testify v1.8.4
+	google.golang.org/grpc v1.41.0
 )
 
 require (
