@@ -7,7 +7,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"google.golang.org/grpc/metadata"
 )
+
+const grafanaTenantId = "tenantID"
 
 var (
 	// timeNow makes it possible to test usage of time
@@ -20,7 +24,7 @@ type AccessToken struct {
 }
 
 type TokenRetriever interface {
-	GetCacheKey() string
+	GetCacheKey(grafanaMultiTenantId string) string
 	Init() error
 	GetAccessToken(ctx context.Context, scopes []string) (*AccessToken, error)
 }
@@ -54,15 +58,15 @@ type scopesCacheEntry struct {
 }
 
 func (c *tokenCacheImpl) GetAccessToken(ctx context.Context, tokenRetriever TokenRetriever, scopes []string) (string, error) {
-	return c.getEntryFor(tokenRetriever).getAccessToken(ctx, scopes)
+	return c.getEntryFor(ctx, tokenRetriever).getAccessToken(ctx, scopes)
 }
 
-func (c *tokenCacheImpl) getEntryFor(credential TokenRetriever) *credentialCacheEntry {
+func (c *tokenCacheImpl) getEntryFor(ctx context.Context, credential TokenRetriever) *credentialCacheEntry {
 	var entry interface{}
 	var ok bool
+	tid := returnGrafanaMultiTenantId(ctx)
 
-	key := credential.GetCacheKey()
-
+	key := credential.GetCacheKey(tid)
 	if entry, ok = c.cache.Load(key); !ok {
 		entry, _ = c.cache.LoadOrStore(key, &credentialCacheEntry{
 			retriever: credential,
@@ -186,4 +190,17 @@ func getKeyForScopes(scopes []string) string {
 	}
 
 	return strings.Join(scopes, " ")
+}
+
+func returnGrafanaMultiTenantId(ctx context.Context) (grafanaMultiTenantId string) {
+	md, exists := metadata.FromIncomingContext(ctx)
+
+	if exists {
+		tid := md.Get(grafanaTenantId)
+		if len(tid) > 0 && tid[0] != "" {
+			grafanaMultiTenantId = tid[0]
+		}
+	}
+
+	return grafanaMultiTenantId
 }

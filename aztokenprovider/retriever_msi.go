@@ -28,12 +28,12 @@ func getManagedIdentityTokenRetriever(settings *azsettings.AzureSettings, creden
 	}
 }
 
-func (c *managedIdentityTokenRetriever) GetCacheKey() string {
+func (c *managedIdentityTokenRetriever) GetCacheKey(grafanaMultiTenantId string) string {
 	clientId := c.clientId
 	if clientId == "" {
 		clientId = "system"
 	}
-	return fmt.Sprintf("azure|msi|%s", clientId)
+	return fmt.Sprintf("azure|msi|%s|%s", clientId, grafanaMultiTenantId)
 }
 
 func (c *managedIdentityTokenRetriever) Init() error {
