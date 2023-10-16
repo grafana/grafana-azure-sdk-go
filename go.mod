@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.8.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.4.0
-	github.com/grafana/grafana-plugin-sdk-go v0.180.0
+	github.com/grafana/grafana-plugin-sdk-go v0.183.0
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/grpc v1.57.0
 )
