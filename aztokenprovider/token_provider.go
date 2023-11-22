@@ -71,6 +71,14 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			err = fmt.Errorf("user identity authentication is not enabled in Grafana config")
 			return nil, err
 		}
+
+		var tokenRetriever TokenRetriever
+		if c.ServicePrincipal.ClientId != "" && c.ServicePrincipal.ClientSecret != "" && c.ServicePrincipal.TenantId != "" {
+			tokenRetriever, err = getClientSecretTokenRetriever(&c.ServicePrincipal)
+			if err != nil {
+				return nil, err
+			}
+		}
 		tokenEndpoint := settings.UserIdentityTokenEndpoint
 		client, err := NewTokenClient(tokenEndpoint.TokenUrl, tokenEndpoint.ClientId, tokenEndpoint.ClientSecret, http.DefaultClient)
 		if err != nil {
@@ -81,6 +89,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			tokenCache:        azureTokenCache,
 			client:            client,
 			usernameAssertion: tokenEndpoint.UsernameAssertion,
+			tokenRetriever:    tokenRetriever,
 		}, nil
 	default:
 		err = fmt.Errorf("credentials of type '%s' not supported by Azure authentication provider", c.AzureAuthType())
@@ -114,6 +123,7 @@ type userTokenProvider struct {
 	tokenCache        ConcurrentTokenCache
 	client            TokenClient
 	usernameAssertion bool
+	tokenRetriever    TokenRetriever
 }
 
 func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []string) (string, error) {
@@ -128,6 +138,13 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 
 	currentUser, ok := azusercontext.GetCurrentUser(ctx)
 	if !ok {
+		if provider.tokenRetriever != nil {
+			accessToken, err := provider.tokenCache.GetAccessToken(ctx, provider.tokenRetriever, scopes)
+			if err != nil {
+				return "", err
+			}
+			return accessToken, nil
+		}
 		err := fmt.Errorf("user context not configured")
 		return "", err
 	}
