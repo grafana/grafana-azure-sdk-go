@@ -137,7 +137,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 	}
 
 	currentUser, ok := azusercontext.GetCurrentUser(ctx)
-	if !ok {
+	if !ok || currentUser.IdToken == "" && !provider.usernameAssertion {
 		if provider.tokenRetriever != nil {
 			accessToken, err := provider.tokenCache.GetAccessToken(ctx, provider.tokenRetriever, scopes)
 			if err != nil {

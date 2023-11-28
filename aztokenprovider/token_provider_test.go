@@ -110,6 +110,15 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 	})
 }
 
+var mockUserCredentials = &azcredentials.AadCurrentUserCredentials{
+	ServicePrincipal: azcredentials.AzureClientSecretCredentials{
+		AzureCloud:   azsettings.AzurePublic,
+		TenantId:     "TEST-TENANT",
+		ClientId:     "TEST-CLIENT-ID",
+		ClientSecret: "TEST-CLIENT-SECRET",
+	},
+}
+
 func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 	settingsNotConfigured := &azsettings.AzureSettings{}
 
@@ -140,6 +149,13 @@ func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 		credentials := &azcredentials.AadCurrentUserCredentials{}
 
 		provider, err := NewAzureAccessTokenProvider(settings, credentials, true)
+		require.NoError(t, err)
+		require.IsType(t, &userTokenProvider{}, provider)
+	})
+
+	t.Run("should return user provider with service principal credentials when user identity configured", func(t *testing.T) {
+
+		provider, err := NewAzureAccessTokenProvider(settings, mockUserCredentials, true)
 		require.NoError(t, err)
 		require.IsType(t, &userTokenProvider{}, provider)
 	})
@@ -238,6 +254,42 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 		})
 
 		_, err = provider.GetAccessToken(usrctx, scopes)
+		require.NoError(t, err)
+	})
+
+	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without an access token or id token", func(t *testing.T) {
+
+		tokenRetriever, _ := getClientSecretTokenRetriever(&mockUserCredentials.ServicePrincipal)
+		var provider AzureTokenProvider = &userTokenProvider{
+			tokenCache:     &tokenCacheFake{},
+			tokenRetriever: tokenRetriever,
+		}
+
+		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+			assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
+		}
+
+		usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+			User: &backend.User{},
+		})
+
+		_, err = provider.GetAccessToken(usrctx, scopes)
+		require.NoError(t, err)
+	})
+
+	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without a user in context", func(t *testing.T) {
+
+		tokenRetriever, _ := getClientSecretTokenRetriever(&mockUserCredentials.ServicePrincipal)
+		var provider AzureTokenProvider = &userTokenProvider{
+			tokenCache:     &tokenCacheFake{},
+			tokenRetriever: tokenRetriever,
+		}
+
+		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+			assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
+		}
+
+		_, err = provider.GetAccessToken(ctx, scopes)
 		require.NoError(t, err)
 	})
 }
