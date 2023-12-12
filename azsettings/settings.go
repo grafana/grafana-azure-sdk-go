@@ -17,6 +17,9 @@ type AzureSettings struct {
 
 	UserIdentityEnabled       bool
 	UserIdentityTokenEndpoint *TokenEndpointSettings
+
+	// This field determines which plugins will receive the settings via plugin context
+	Plugins []string
 }
 
 type WorkloadIdentitySettings struct {
