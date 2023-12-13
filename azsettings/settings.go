@@ -19,7 +19,7 @@ type AzureSettings struct {
 	UserIdentityTokenEndpoint *TokenEndpointSettings
 
 	// This field determines which plugins will receive the settings via plugin context
-	Plugins []string
+	ForwardSettingsPlugins []string
 }
 
 type WorkloadIdentitySettings struct {
