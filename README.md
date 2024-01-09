@@ -6,7 +6,11 @@ SDK for integration of Grafana datasources with Azure services.
 
 ### azsettings
 
-Common Azure configuration.
+Common Azure configuration. Can be read from either the environment variables of the Grafana instance (if supplied to the plugin) or from the context supplied to the plugin (if available).
+
+This can be achieved by making use of `ReadSettings` which will determine the settings based on the available context.
+
+**Note:** If the plugin context contains any Azure related variable then it will be used in place of any environment variables present.
 
 ### azcredentials
 
