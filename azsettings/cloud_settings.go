@@ -2,7 +2,6 @@ package azsettings
 
 import (
 	"fmt"
-	"sort"
 )
 
 type AzureCloudInfo struct {
@@ -17,9 +16,9 @@ type AzureCloudSettings struct {
 	Properties   map[string]string
 }
 
-var predefinedClouds = map[string]*AzureCloudSettings{
-	AzurePublic: {
-		Name:         "AzureCloud",
+var predefinedClouds = []*AzureCloudSettings{
+	{
+		Name:         AzurePublic,
 		DisplayName:  "Azure",
 		AadAuthority: "https://login.microsoftonline.com/",
 		Properties: map[string]string{
@@ -30,8 +29,8 @@ var predefinedClouds = map[string]*AzureCloudSettings{
 			"resourceManager":         "https://management.azure.com",
 		},
 	},
-	AzureChina: {
-		Name:         "AzureChinaCloud",
+	{
+		Name:         AzureChina,
 		DisplayName:  "Azure China",
 		AadAuthority: "https://login.chinacloudapi.cn/",
 		Properties: map[string]string{
@@ -42,8 +41,8 @@ var predefinedClouds = map[string]*AzureCloudSettings{
 			"resourceManager":         "https://management.chinacloudapi.cn",
 		},
 	},
-	AzureUSGovernment: {
-		Name:         "AzureUSGovernment",
+	{
+		Name:         AzureUSGovernment,
 		DisplayName:  "Azure US Government",
 		AadAuthority: "https://login.microsoftonline.us/",
 		Properties: map[string]string{
@@ -57,34 +56,31 @@ var predefinedClouds = map[string]*AzureCloudSettings{
 }
 
 func (*AzureSettings) Clouds() []AzureCloudInfo {
-	clouds := make([]AzureCloudInfo, 0, len(predefinedClouds))
-	for _, cloud := range predefinedClouds {
-		clouds = append(clouds, AzureCloudInfo{
+	clouds := getClouds()
+
+	results := make([]AzureCloudInfo, 0, len(clouds))
+	for _, cloud := range clouds {
+		results = append(results, AzureCloudInfo{
 			Name:        cloud.Name,
 			DisplayName: cloud.DisplayName,
 		})
 	}
 
-	// Sort by name
-	sort.Slice(clouds, func(i, j int) bool {
-		istr := clouds[i].DisplayName
-		if istr == "" {
-			istr = clouds[i].Name
-		}
-		jstr := clouds[j].DisplayName
-		if jstr == "" {
-			jstr = clouds[j].Name
-		}
-		return istr < jstr
-	})
-
-	return clouds
+	return results
 }
 
 func (*AzureSettings) GetCloud(cloudName string) (*AzureCloudSettings, error) {
-	if cloudSettings, ok := predefinedClouds[cloudName]; !ok {
-		return nil, fmt.Errorf("the Azure cloud '%s' not supported", cloudName)
-	} else {
-		return cloudSettings, nil
+	clouds := getClouds()
+
+	for _, cloud := range clouds {
+		if cloud.Name == cloudName {
+			return cloud, nil
+		}
 	}
+
+	return nil, fmt.Errorf("the Azure cloud '%s' not supported", cloudName)
+}
+
+func getClouds() []*AzureCloudSettings {
+	return predefinedClouds
 }
