@@ -10,6 +10,10 @@ import (
 )
 
 func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
+	var settings = &azsettings.AzureSettings{
+		Cloud: azsettings.AzurePublic,
+	}
+
 	defaultCredentials := func() *azcredentials.AzureClientSecretCredentials {
 		return &azcredentials.AzureClientSecretCredentials{
 			AzureCloud:   azsettings.AzurePublic,
@@ -23,7 +27,7 @@ func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
 	t.Run("should return clientSecretTokenRetriever with values", func(t *testing.T) {
 		credentials := defaultCredentials()
 
-		result, err := getClientSecretTokenRetriever(credentials)
+		result, err := getClientSecretTokenRetriever(settings, credentials)
 		require.NoError(t, err)
 
 		assert.IsType(t, &clientSecretTokenRetriever{}, result)
@@ -39,7 +43,7 @@ func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
 		credentials := defaultCredentials()
 		credentials.AzureCloud = azsettings.AzureChina
 
-		result, err := getClientSecretTokenRetriever(credentials)
+		result, err := getClientSecretTokenRetriever(settings, credentials)
 		require.NoError(t, err)
 
 		assert.IsType(t, &clientSecretTokenRetriever{}, result)
@@ -53,7 +57,7 @@ func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
 		credentials.AzureCloud = azsettings.AzureChina
 		credentials.Authority = "https://another.com/"
 
-		result, err := getClientSecretTokenRetriever(credentials)
+		result, err := getClientSecretTokenRetriever(settings, credentials)
 		require.NoError(t, err)
 
 		assert.IsType(t, &clientSecretTokenRetriever{}, result)
@@ -66,7 +70,7 @@ func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
 		credentials := defaultCredentials()
 		credentials.AzureCloud = "InvalidCloud"
 
-		_, err := getClientSecretTokenRetriever(credentials)
+		_, err := getClientSecretTokenRetriever(settings, credentials)
 		require.Error(t, err)
 	})
 }
