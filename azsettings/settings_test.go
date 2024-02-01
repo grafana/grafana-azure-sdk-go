@@ -44,6 +44,7 @@ func TestSettingsFromContext(t *testing.T) {
 				name: "azure settings in config",
 				cfg: backend.NewGrafanaCfg(map[string]string{
 					AzureCloud:                AzurePublic,
+					AzureAuthEnabled:          "true",
 					ManagedIdentityEnabled:    "true",
 					ManagedIdentityClientID:   "mock_managed_identity_client_id",
 					UserIdentityEnabled:       "true",
@@ -58,6 +59,7 @@ func TestSettingsFromContext(t *testing.T) {
 				}),
 				expectedAzure: &AzureSettings{
 					Cloud:                   AzurePublic,
+					AzureAuthEnabled:        true,
 					ManagedIdentityEnabled:  true,
 					ManagedIdentityClientId: "mock_managed_identity_client_id",
 					UserIdentityEnabled:     true,
