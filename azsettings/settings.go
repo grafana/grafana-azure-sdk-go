@@ -8,6 +8,7 @@ import (
 )
 
 type AzureSettings struct {
+	AzureAuthEnabled        bool
 	Cloud                   string
 	ManagedIdentityEnabled  bool
 	ManagedIdentityClientId string
@@ -52,6 +53,10 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 
 	if cfg == nil {
 		return settings, false
+	}
+
+	if v := cfg.Get(AzureAuthEnabled); v == strconv.FormatBool(true) {
+		settings.AzureAuthEnabled = true
 	}
 
 	hasSettings := false
