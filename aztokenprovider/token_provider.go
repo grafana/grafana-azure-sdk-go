@@ -74,7 +74,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 
 		var tokenRetriever TokenRetriever
 		if c.ServiceCredentials.ClientId != "" && c.ServiceCredentials.ClientSecret != "" && c.ServiceCredentials.TenantId != "" {
-			tokenRetriever, err = getClientSecretTokenRetriever(&c.ServiceCredentials)
+			tokenRetriever, err = getClientSecretTokenRetriever(settings, &c.ServiceCredentials)
 			if err != nil {
 				return nil, err
 			}
