@@ -257,9 +257,9 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without an access token or id token", func(t *testing.T) {
+	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without an access token or id token if enabled", func(t *testing.T) {
 
-		tokenRetriever, _ := getClientSecretTokenRetriever(&mockUserCredentials.ServiceCredentials)
+		tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityServiceCredentials: true}, &mockUserCredentials.ServiceCredentials)
 		var provider AzureTokenProvider = &userTokenProvider{
 			tokenCache:     &tokenCacheFake{},
 			tokenRetriever: tokenRetriever,
@@ -272,14 +272,18 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 		usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 			User: &backend.User{},
 		})
+		settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			"GFAZPL_USER_IDENTITY_ENABLED":             "true",
+			"GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS": "true",
+		}))
 
-		_, err = provider.GetAccessToken(usrctx, scopes)
+		_, err = provider.GetAccessToken(settingsctx, scopes)
 		require.NoError(t, err)
 	})
 
-	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without a user in context", func(t *testing.T) {
+	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without a user in context if enabled", func(t *testing.T) {
 
-		tokenRetriever, _ := getClientSecretTokenRetriever(&mockUserCredentials.ServiceCredentials)
+		tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityServiceCredentials: true}, &mockUserCredentials.ServiceCredentials)
 		var provider AzureTokenProvider = &userTokenProvider{
 			tokenCache:     &tokenCacheFake{},
 			tokenRetriever: tokenRetriever,
@@ -288,8 +292,12 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
 			assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
 		}
+		settingsctx := backend.WithGrafanaConfig(ctx, backend.NewGrafanaCfg(map[string]string{
+			"GFAZPL_USER_IDENTITY_ENABLED":             "true",
+			"GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS": "true",
+		}))
 
-		_, err = provider.GetAccessToken(ctx, scopes)
+		_, err = provider.GetAccessToken(settingsctx, scopes)
 		require.NoError(t, err)
 	})
 }
