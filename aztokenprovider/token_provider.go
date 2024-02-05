@@ -135,9 +135,13 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 		err := fmt.Errorf("parameter 'scopes' cannot be nil")
 		return "", err
 	}
-
+	settings, err := azsettings.ReadSettings(ctx)
+	if err != nil {
+		err := fmt.Errorf("error reading azure settings: %s", err)
+		return "", err
+	}
 	currentUser, ok := azusercontext.GetCurrentUser(ctx)
-	if !ok || currentUser.IdToken == "" && !provider.usernameAssertion {
+	if (!ok || (currentUser.IdToken == "" && !provider.usernameAssertion)) && settings.UserIdentityServiceCredentials {
 		if provider.tokenRetriever != nil {
 			accessToken, err := provider.tokenCache.GetAccessToken(ctx, provider.tokenRetriever, scopes)
 			if err != nil {
