@@ -54,7 +54,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			tokenRetriever: tokenRetriever,
 		}, nil
 	case *azcredentials.AzureClientSecretCredentials:
-		tokenRetriever, err := getClientSecretTokenRetriever(c)
+		tokenRetriever, err := getClientSecretTokenRetriever(settings, c)
 		if err != nil {
 			return nil, err
 		}

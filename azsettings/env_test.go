@@ -20,6 +20,17 @@ func TestReadFromEnv(t *testing.T) {
 		assert.Equal(t, "TestCloud", azureSettings.Cloud)
 	})
 
+	t.Run("should set azureAuthEnabled if variable is set", func(t *testing.T) {
+		unset, err := setEnvVar("GFAZPL_AZURE_AUTH_ENABLED", "true")
+		require.NoError(t, err)
+		defer unset()
+
+		azureSettings, err := ReadFromEnv()
+		require.NoError(t, err)
+
+		assert.Equal(t, true, azureSettings.AzureAuthEnabled)
+	})
+
 	t.Run("should set cloud if fallback variable is set", func(t *testing.T) {
 		unset1, err := setEnvVar("GFAZPL_AZURE_CLOUD", "")
 		require.NoError(t, err)
@@ -401,6 +412,17 @@ func TestWriteToEnvStr(t *testing.T) {
 
 		require.Len(t, envs, 1)
 		assert.Equal(t, "GFAZPL_AZURE_CLOUD=AzureCloud", envs[0])
+	})
+
+	t.Run("should return azureAuthEnabled if set", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			AzureAuthEnabled: true,
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		require.Len(t, envs, 1)
+		assert.Equal(t, "GFAZPL_AZURE_AUTH_ENABLED=true", envs[0])
 	})
 
 	t.Run("should return managed identity set if enabled", func(t *testing.T) {

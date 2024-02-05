@@ -21,19 +21,26 @@ type clientSecretTokenRetriever struct {
 	credential   azcore.TokenCredential
 }
 
-func getClientSecretTokenRetriever(credentials *azcredentials.AzureClientSecretCredentials) (TokenRetriever, error) {
-	var cloudConf cloud.Configuration
+func getClientSecretTokenRetriever(settings *azsettings.AzureSettings, credentials *azcredentials.AzureClientSecretCredentials) (TokenRetriever, error) {
+	var authorityHost string
+
 	if credentials.Authority != "" {
-		cloudConf.ActiveDirectoryAuthorityHost = credentials.Authority
+		// Use AAD authority endpoint configured in credentials
+		authorityHost = credentials.Authority
 	} else {
-		var err error
-		cloudConf, err = resolveCloudConfiguration(credentials.AzureCloud)
+		// Resolve cloud settings for the given cloud name
+		cloudSettings, err := settings.GetCloud(credentials.AzureCloud)
 		if err != nil {
 			return nil, err
 		}
+		authorityHost = cloudSettings.AadAuthority
 	}
+
 	return &clientSecretTokenRetriever{
-		cloudConf:    cloudConf,
+		cloudConf: cloud.Configuration{
+			ActiveDirectoryAuthorityHost: authorityHost,
+			Services:                     map[cloud.ServiceName]cloud.ServiceConfiguration{},
+		},
 		tenantId:     credentials.TenantId,
 		clientId:     credentials.ClientId,
 		clientSecret: credentials.ClientSecret,
@@ -62,21 +69,6 @@ func (c *clientSecretTokenRetriever) GetAccessToken(ctx context.Context, scopes 
 	}
 
 	return &AccessToken{Token: accessToken.Token, ExpiresOn: accessToken.ExpiresOn}, nil
-}
-
-func resolveCloudConfiguration(cloudName string) (cloud.Configuration, error) {
-	// Known Azure clouds
-	switch cloudName {
-	case azsettings.AzurePublic:
-		return cloud.AzurePublic, nil
-	case azsettings.AzureChina:
-		return cloud.AzureChina, nil
-	case azsettings.AzureUSGovernment:
-		return cloud.AzureGovernment, nil
-	default:
-		err := fmt.Errorf("the Azure cloud '%s' not supported", cloudName)
-		return cloud.Configuration{}, err
-	}
 }
 
 func hashSecret(secret string) string {

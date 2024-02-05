@@ -9,6 +9,8 @@ import (
 const (
 	AzureCloud = "GFAZPL_AZURE_CLOUD"
 
+	AzureAuthEnabled = "GFAZPL_AZURE_AUTH_ENABLED"
+
 	ManagedIdentityEnabled  = "GFAZPL_MANAGED_IDENTITY_ENABLED"
 	ManagedIdentityClientID = "GFAZPL_MANAGED_IDENTITY_CLIENT_ID"
 
@@ -34,6 +36,14 @@ func ReadFromEnv() (*AzureSettings, error) {
 	azureSettings := &AzureSettings{}
 
 	azureSettings.Cloud = envutil.GetOrFallback(AzureCloud, fallbackAzureCloud, AzurePublic)
+
+	// Azure auth enabled or not
+	if azureAuthEnabled, err := envutil.GetBoolOrDefault(AzureAuthEnabled, false); err != nil {
+		err = fmt.Errorf("invalid Azure configuration: %w", err)
+		return nil, err
+	} else if azureAuthEnabled {
+		azureSettings.AzureAuthEnabled = true
+	}
 
 	// Managed Identity authentication
 	if msiEnabled, err := envutil.GetBoolOrFallback(ManagedIdentityEnabled, fallbackManagedIdentityEnabled, false); err != nil {
@@ -104,6 +114,10 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 	if azureSettings != nil {
 		if azureSettings.Cloud != "" {
 			envs = append(envs, fmt.Sprintf("%s=%s", AzureCloud, azureSettings.Cloud))
+		}
+
+		if azureSettings.AzureAuthEnabled {
+			envs = append(envs, fmt.Sprintf("%s=true", AzureAuthEnabled))
 		}
 
 		if azureSettings.ManagedIdentityEnabled {
