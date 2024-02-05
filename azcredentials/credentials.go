@@ -14,7 +14,7 @@ type AzureCredentials interface {
 
 // AadCurrentUserCredentials "Current User" user identity credentials of the current Grafana user.
 type AadCurrentUserCredentials struct {
-	ServicePrincipal AzureClientSecretCredentials
+	ServiceCredentials AzureClientSecretCredentials
 }
 
 // AzureManagedIdentityCredentials "Managed Identity" service managed identity credentials configured
