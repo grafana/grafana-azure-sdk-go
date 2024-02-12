@@ -111,7 +111,7 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 }
 
 var mockUserCredentials = &azcredentials.AadCurrentUserCredentials{
-	ServiceCredentials: azcredentials.AzureClientSecretCredentials{
+	ServiceCredentials: &azcredentials.AzureClientSecretCredentials{
 		AzureCloud:   azsettings.AzurePublic,
 		TenantId:     "TEST-TENANT",
 		ClientId:     "TEST-CLIENT-ID",
