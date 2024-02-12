@@ -52,7 +52,7 @@ func WithUserFromHealthCheckReq(ctx context.Context, req *backend.CheckHealthReq
 
 	idToken := getCheckHealthReqHeader(req, "X-ID-Token")
 	accessToken := extractBearerToken(getCheckHealthReqHeader(req, "Authorization"))
-	grafanaIdToken := getCheckHealthReqHeader(req, "X-Grafana-Id")
+	grafanaIdToken := getCheckHealthReqHeader(req, "http_X-Grafana-Id")
 
 	currentUser := CurrentUserContext{
 		User:           req.PluginContext.User,
