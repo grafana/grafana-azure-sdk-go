@@ -73,10 +73,23 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 		}
 
 		var tokenRetriever TokenRetriever
-		if c.ServiceCredentials.ClientId != "" && c.ServiceCredentials.ClientSecret != "" && c.ServiceCredentials.TenantId != "" {
-			tokenRetriever, err = getClientSecretTokenRetriever(settings, &c.ServiceCredentials)
-			if err != nil {
-				return nil, err
+
+		if c.ServiceCredentials != nil {
+			fallbackType := c.ServiceCredentials.AzureAuthType()
+			if fallbackType == azcredentials.AzureAuthCurrentUserIdentity || fallbackType == azcredentials.AzureAuthClientSecretObo {
+				err = fmt.Errorf("user identity authentication not valid for fallback credentials")
+			}
+			switch c.ServiceCredentials.(type) {
+			case *azcredentials.AzureClientSecretCredentials:
+				tokenRetriever, err = getClientSecretTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureClientSecretCredentials))
+				if err != nil {
+					return nil, err
+				}
+			case *azcredentials.AzureManagedIdentityCredentials:
+				tokenRetriever = getManagedIdentityTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureManagedIdentityCredentials))
+			case *azcredentials.AzureWorkloadIdentityCredentials:
+				tokenRetriever = getWorkloadIdentityTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureWorkloadIdentityCredentials))
+
 			}
 		}
 		tokenEndpoint := settings.UserIdentityTokenEndpoint
