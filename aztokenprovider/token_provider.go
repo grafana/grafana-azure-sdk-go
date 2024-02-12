@@ -193,7 +193,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 		return "", fmt.Errorf("user context not configured")
 	}
 
-	idForwardingSupported := backend.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled("IDForwarding")
+	idForwardingSupported := backend.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled("idForwarding")
 	backendRequest := isBackendRequest(currentUser, idForwardingSupported)
 
 	if backendRequest {
