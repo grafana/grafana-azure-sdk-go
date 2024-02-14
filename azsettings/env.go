@@ -19,12 +19,12 @@ const (
 	WorkloadIdentityClientID  = "GFAZPL_WORKLOAD_IDENTITY_CLIENT_ID"
 	WorkloadIdentityTokenFile = "GFAZPL_WORKLOAD_IDENTITY_TOKEN_FILE"
 
-	UserIdentityEnabled            = "GFAZPL_USER_IDENTITY_ENABLED"
-	UserIdentityTokenURL           = "GFAZPL_USER_IDENTITY_TOKEN_URL"
-	UserIdentityClientID           = "GFAZPL_USER_IDENTITY_CLIENT_ID"
-	UserIdentityClientSecret       = "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
-	UserIdentityAssertion          = "GFAZPL_USER_IDENTITY_ASSERTION"
-	UserIdentityServiceCredentials = "GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS"
+	UserIdentityEnabled                    = "GFAZPL_USER_IDENTITY_ENABLED"
+	UserIdentityTokenURL                   = "GFAZPL_USER_IDENTITY_TOKEN_URL"
+	UserIdentityClientID                   = "GFAZPL_USER_IDENTITY_CLIENT_ID"
+	UserIdentityClientSecret               = "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
+	UserIdentityAssertion                  = "GFAZPL_USER_IDENTITY_ASSERTION"
+	UserIdentityFallbackCredentialsEnabled = "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED"
 
 	// Pre Grafana 9.x variables
 	fallbackAzureCloud              = "AZURE_CLOUD"
@@ -90,7 +90,7 @@ func ReadFromEnv() (*AzureSettings, error) {
 		assertion := envutil.GetOrDefault(UserIdentityAssertion, "")
 		usernameAssertion := assertion == "username"
 
-		serviceCredentialsFallback, err := envutil.GetBoolOrDefault(UserIdentityServiceCredentials, true)
+		serviceCredentialsFallback, err := envutil.GetBoolOrDefault(UserIdentityFallbackCredentialsEnabled, true)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func ReadFromEnv() (*AzureSettings, error) {
 			ClientSecret:      clientSecret,
 			UsernameAssertion: usernameAssertion,
 		}
-		azureSettings.UserIdentityServiceCredentials = serviceCredentialsFallback
+		azureSettings.UserIdentityFallbackCredentialsEnabled = serviceCredentialsFallback
 	}
 
 	return azureSettings, nil
@@ -146,7 +146,7 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 
 		if azureSettings.UserIdentityEnabled {
 			envs = append(envs, fmt.Sprintf("%s=true", UserIdentityEnabled))
-			envs = append(envs, fmt.Sprintf("%s=%t", UserIdentityServiceCredentials, azureSettings.UserIdentityServiceCredentials))
+			envs = append(envs, fmt.Sprintf("%s=%t", UserIdentityFallbackCredentialsEnabled, azureSettings.UserIdentityFallbackCredentialsEnabled))
 
 			if tokenEndpoint := azureSettings.UserIdentityTokenEndpoint; tokenEndpoint != nil {
 				if tokenEndpoint.TokenUrl != "" {

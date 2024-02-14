@@ -341,7 +341,7 @@ func TestReadFromEnv(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.True(t, azureSettings.UserIdentityEnabled)
-			assert.True(t, azureSettings.UserIdentityServiceCredentials)
+			assert.True(t, azureSettings.UserIdentityFallbackCredentialsEnabled)
 
 		})
 
@@ -355,14 +355,14 @@ func TestReadFromEnv(t *testing.T) {
 			unset3, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_SECRET", "87808761-ff7b-492e-bb0d-5de2437ffa55")
 			require.NoError(t, err)
 			defer unset3()
-			unset4, err := setEnvVar("GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS", "false")
+			unset4, err := setEnvVar("GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED", "false")
 			require.NoError(t, err)
 			defer unset4()
 			azureSettings, err := ReadFromEnv()
 			require.NoError(t, err)
 
 			assert.True(t, azureSettings.UserIdentityEnabled)
-			assert.False(t, azureSettings.UserIdentityServiceCredentials)
+			assert.False(t, azureSettings.UserIdentityFallbackCredentialsEnabled)
 
 		})
 	})
@@ -524,20 +524,20 @@ func TestWriteToEnvStr(t *testing.T) {
 
 		require.Len(t, envs, 2)
 		assert.Equal(t, "GFAZPL_USER_IDENTITY_ENABLED=true", envs[0])
-		assert.Equal(t, "GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS=false", envs[1])
+		assert.Equal(t, "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED=false", envs[1])
 	})
 
 	t.Run("should return user identity set if enabled with service credentials enabled", func(t *testing.T) {
 		azureSettings := &AzureSettings{
-			UserIdentityEnabled:            true,
-			UserIdentityServiceCredentials: true,
+			UserIdentityEnabled:                    true,
+			UserIdentityFallbackCredentialsEnabled: true,
 		}
 
 		envs := WriteToEnvStr(azureSettings)
 
 		require.Len(t, envs, 2)
 		assert.Equal(t, "GFAZPL_USER_IDENTITY_ENABLED=true", envs[0])
-		assert.Equal(t, "GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS=true", envs[1])
+		assert.Equal(t, "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED=true", envs[1])
 	})
 
 	t.Run("should return user identity endpoint settings if user identity enabled", func(t *testing.T) {
@@ -554,7 +554,7 @@ func TestWriteToEnvStr(t *testing.T) {
 
 		assert.Len(t, envs, 5)
 		assert.Equal(t, "GFAZPL_USER_IDENTITY_ENABLED=true", envs[0])
-		assert.Equal(t, "GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS=false", envs[1])
+		assert.Equal(t, "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED=false", envs[1])
 		assert.Equal(t, "GFAZPL_USER_IDENTITY_TOKEN_URL=https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token", envs[2])
 		assert.Equal(t, "GFAZPL_USER_IDENTITY_CLIENT_ID=f85aa887-490d-4fac-9306-9b99ad0aa31d", envs[3])
 		assert.Equal(t, "GFAZPL_USER_IDENTITY_CLIENT_SECRET=87808761-ff7b-492e-bb0d-5de2437ffa55", envs[4])

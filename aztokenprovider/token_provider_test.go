@@ -259,7 +259,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 
 	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without an access token or id token if enabled", func(t *testing.T) {
 
-		tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityServiceCredentials: true}, &mockUserCredentials.ServiceCredentials)
+		tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityFallbackCredentialsEnabled: true}, &mockUserCredentials.ServiceCredentials)
 		var provider AzureTokenProvider = &userTokenProvider{
 			tokenCache:     &tokenCacheFake{},
 			tokenRetriever: tokenRetriever,
@@ -273,8 +273,8 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			User: &backend.User{},
 		})
 		settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
-			"GFAZPL_USER_IDENTITY_ENABLED":             "true",
-			"GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS": "true",
+			"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+			"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
 		}))
 
 		_, err = provider.GetAccessToken(settingsctx, scopes)
@@ -283,7 +283,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 
 	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without a user in context if enabled", func(t *testing.T) {
 
-		tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityServiceCredentials: true}, &mockUserCredentials.ServiceCredentials)
+		tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityFallbackCredentialsEnabled: true}, &mockUserCredentials.ServiceCredentials)
 		var provider AzureTokenProvider = &userTokenProvider{
 			tokenCache:     &tokenCacheFake{},
 			tokenRetriever: tokenRetriever,
@@ -293,8 +293,8 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
 		}
 		settingsctx := backend.WithGrafanaConfig(ctx, backend.NewGrafanaCfg(map[string]string{
-			"GFAZPL_USER_IDENTITY_ENABLED":             "true",
-			"GFAZPL_USER_IDENTITY_SERVICE_CREDENTIALS": "true",
+			"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+			"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
 		}))
 
 		_, err = provider.GetAccessToken(settingsctx, scopes)
