@@ -76,10 +76,10 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 
 		var tokenRetriever TokenRetriever
 
-		if c.ServiceCredentials != nil {
+		if c.ServiceCredentials != nil && settings.UserIdentityFallbackCredentialsEnabled {
 			fallbackType := c.ServiceCredentials.AzureAuthType()
 			if fallbackType == azcredentials.AzureAuthCurrentUserIdentity || fallbackType == azcredentials.AzureAuthClientSecretObo {
-				err = fmt.Errorf("user identity authentication not valid for fallback credentials")
+				return nil, fmt.Errorf("user identity authentication not valid for fallback credentials")
 			}
 			switch c.ServiceCredentials.(type) {
 			case *azcredentials.AzureClientSecretCredentials:
@@ -198,7 +198,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 
 	if backendRequest {
 		// Use fallback credentials if this is a backend request and fallback credentials are enabled
-		if settings.UserIdentityEnabled && !provider.usernameAssertion {
+		if settings.UserIdentityFallbackCredentialsEnabled && !provider.usernameAssertion {
 			if provider.tokenRetriever != nil {
 				accessToken, err := provider.tokenCache.GetAccessToken(ctx, provider.tokenRetriever, scopes)
 				if err != nil {
@@ -208,7 +208,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 			}
 		}
 
-		return "", fmt.Errorf("user context not configured")
+		return "", fmt.Errorf("fallback credentials not enabled")
 	}
 
 	azureUser, err := isAzureUser(currentUser)
