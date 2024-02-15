@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/azsettings"
 	"github.com/grafana/grafana-azure-sdk-go/azusercontext"
@@ -110,14 +111,15 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 	})
 }
 
-var mockUserCredentials = &azcredentials.AadCurrentUserCredentials{
-	ServiceCredentials: &azcredentials.AzureClientSecretCredentials{
-		AzureCloud:   azsettings.AzurePublic,
-		TenantId:     "TEST-TENANT",
-		ClientId:     "TEST-CLIENT-ID",
-		ClientSecret: "TEST-CLIENT-SECRET",
-	},
+var mockClientSecretCredentials = &azcredentials.AzureClientSecretCredentials{
+	AzureCloud:   azsettings.AzurePublic,
+	TenantId:     "TEST-TENANT",
+	ClientId:     "TEST-CLIENT-ID",
+	ClientSecret: "TEST-CLIENT-SECRET",
 }
+
+var mockMsiCredentials = &azcredentials.AzureManagedIdentityCredentials{}
+var mockWorkloadIdentityCredentials = &azcredentials.AzureWorkloadIdentityCredentials{}
 
 func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 	settingsNotConfigured := &azsettings.AzureSettings{}
@@ -129,6 +131,15 @@ func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 			ClientId:     "FAKE_CLIENT_ID",
 			ClientSecret: "FAKE_CLIENT_SECRET",
 		},
+	}
+	settingsFallbackEnabled := &azsettings.AzureSettings{
+		UserIdentityEnabled: true,
+		UserIdentityTokenEndpoint: &azsettings.TokenEndpointSettings{
+			TokenUrl:     "FAKE_TOKEN_URL",
+			ClientId:     "FAKE_CLIENT_ID",
+			ClientSecret: "FAKE_CLIENT_SECRET",
+		},
+		UserIdentityFallbackCredentialsEnabled: true,
 	}
 
 	t.Run("should fail when user identity not supported", func(t *testing.T) {
@@ -155,9 +166,29 @@ func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 
 	t.Run("should return user provider with service principal credentials when user identity configured", func(t *testing.T) {
 
-		provider, err := NewAzureAccessTokenProvider(settings, mockUserCredentials, true)
+		provider, err := NewAzureAccessTokenProvider(settings, &azcredentials.AadCurrentUserCredentials{
+			ServiceCredentials: mockClientSecretCredentials,
+		}, true)
 		require.NoError(t, err)
 		require.IsType(t, &userTokenProvider{}, provider)
+	})
+
+	t.Run("should error if fallback credentials set to user credentials", func(t *testing.T) {
+
+		_, err := NewAzureAccessTokenProvider(settingsFallbackEnabled, &azcredentials.AadCurrentUserCredentials{
+			ServiceCredentials: &azcredentials.AadCurrentUserCredentials{},
+		}, true)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "user identity authentication not valid for fallback credentials")
+	})
+
+	t.Run("should error if fallback credentials set to OBO credentials", func(t *testing.T) {
+
+		_, err := NewAzureAccessTokenProvider(settingsFallbackEnabled, &azcredentials.AadCurrentUserCredentials{
+			ServiceCredentials: &azcredentials.AzureClientSecretOboCredentials{},
+		}, true)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "user identity authentication not valid for fallback credentials")
 	})
 }
 
@@ -170,134 +201,334 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 
 	var err error
 
-	t.Run("should fail if user context not configured", func(t *testing.T) {
-		var provider AzureTokenProvider = &userTokenProvider{
-			tokenCache: &tokenCacheFake{},
-		}
+	t.Run("frontend requests (user in scope)", func(t *testing.T) {
+		t.Run("should fail if user context not configured", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache: &tokenCacheFake{},
+			}
 
-		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
-			assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
-		}
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
+			}
 
-		_, err = provider.GetAccessToken(ctx, scopes)
-		assert.Error(t, err)
-	})
-
-	t.Run("should fail if no user in user context", func(t *testing.T) {
-		var provider AzureTokenProvider = &userTokenProvider{
-			tokenCache: &tokenCacheFake{},
-		}
-
-		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
-			assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
-		}
-
-		usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{})
-
-		_, err = provider.GetAccessToken(usrctx, scopes)
-		assert.Error(t, err)
-	})
-
-	t.Run("should fail if no ID token in user context", func(t *testing.T) {
-		var provider AzureTokenProvider = &userTokenProvider{
-			tokenCache: &tokenCacheFake{},
-		}
-
-		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
-			assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
-		}
-
-		usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
-			User: &backend.User{
-				Login: "user1@example.org",
-			},
+			_, err = provider.GetAccessToken(ctx, scopes)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "user context not configured")
 		})
 
-		_, err = provider.GetAccessToken(usrctx, scopes)
-		assert.Error(t, err)
-	})
+		t.Run("will error if user is not authenticated with Azure AD and ID forwarding enabled", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache: &tokenCacheFake{},
+			}
 
-	t.Run("should use onBehalfOfTokenRetriever by default", func(t *testing.T) {
-		var provider AzureTokenProvider = &userTokenProvider{
-			tokenCache: &tokenCacheFake{},
-		}
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
+			}
 
-		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
-			assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
-		}
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+				"authenticatedBy": "not_azuread",
+			})
+			jwtToken, _ := token.SignedString([]byte("test-key")) // 👈
 
-		usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
-			User: &backend.User{
-				Login: "user1@example.org",
-			},
-			IdToken: "FAKE_ID_TOKEN",
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: &backend.User{
+					Login: "user1@example.org",
+				},
+				IdToken:        "FAKE_ID_TOKEN",
+				GrafanaIdToken: jwtToken,
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE": "idForwarding",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.Error(t, err)
+			require.ErrorContains(t, err, "user is not authenticated with Azure AD")
 		})
 
-		_, err = provider.GetAccessToken(usrctx, scopes)
-		require.NoError(t, err)
-	})
+		t.Run("will assume request is frontend if user != nil and ID forwarding disabled", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache: &tokenCacheFake{},
+			}
 
-	t.Run("should use usernameTokenRetriever for usernameAssertion", func(t *testing.T) {
-		var provider AzureTokenProvider = &userTokenProvider{
-			tokenCache:        &tokenCacheFake{},
-			usernameAssertion: true,
-		}
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
+			}
 
-		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
-			assert.IsType(t, &usernameTokenRetriever{}, retriever)
-		}
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: &backend.User{
+					Login: "user1@example.org",
+				},
+				IdToken: "FAKE_ID_TOKEN",
+			})
 
-		usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
-			User: &backend.User{
-				Login: "user1@example.org",
-			},
+			_, err = provider.GetAccessToken(usrctx, scopes)
+			require.NoError(t, err)
 		})
 
-		_, err = provider.GetAccessToken(usrctx, scopes)
-		require.NoError(t, err)
-	})
+		t.Run("should fail if no ID token in user context", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache: &tokenCacheFake{},
+			}
 
-	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without an access token or id token if enabled", func(t *testing.T) {
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
+			}
 
-		tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityFallbackCredentialsEnabled: true}, &mockUserCredentials.ServiceCredentials)
-		var provider AzureTokenProvider = &userTokenProvider{
-			tokenCache:     &tokenCacheFake{},
-			tokenRetriever: tokenRetriever,
-		}
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: &backend.User{
+					Login: "user1@example.org",
+				},
+			})
 
-		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
-			assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
-		}
-
-		usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
-			User: &backend.User{},
+			_, err = provider.GetAccessToken(usrctx, scopes)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "user identity authentication not possible because there's no ID token associated with the Grafana user")
 		})
-		settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
-			"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
-			"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
-		}))
 
-		_, err = provider.GetAccessToken(settingsctx, scopes)
-		require.NoError(t, err)
+		t.Run("should fail if no username in user context", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache: &tokenCacheFake{},
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: &backend.User{
+					Login: "",
+				},
+			})
+
+			_, err = provider.GetAccessToken(usrctx, scopes)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "user identity authentication only possible in context of a Grafana user: request not associated with a Grafana user")
+		})
+
+		t.Run("should use onBehalfOfTokenRetriever by default", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache: &tokenCacheFake{},
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &onBehalfOfTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: &backend.User{
+					Login: "user1@example.org",
+				},
+				IdToken: "FAKE_ID_TOKEN",
+			})
+
+			_, err = provider.GetAccessToken(usrctx, scopes)
+			require.NoError(t, err)
+		})
+
+		t.Run("should use usernameTokenRetriever for usernameAssertion", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:        &tokenCacheFake{},
+				usernameAssertion: true,
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &usernameTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: &backend.User{
+					Login: "user1@example.org",
+				},
+			})
+
+			_, err = provider.GetAccessToken(usrctx, scopes)
+			require.NoError(t, err)
+		})
 	})
 
-	t.Run("should use clientSecretTokenRetriever when service principal credentials are available without a user in context if enabled", func(t *testing.T) {
+	t.Run("backend requests", func(t *testing.T) {
+		t.Run("will be treated as a backend request if ID forwarding enabled and ID token is empty", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:     &tokenCacheFake{},
+				tokenRetriever: &clientSecretTokenRetriever{},
+			}
 
-		tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityFallbackCredentialsEnabled: true}, &mockUserCredentials.ServiceCredentials)
-		var provider AzureTokenProvider = &userTokenProvider{
-			tokenCache:     &tokenCacheFake{},
-			tokenRetriever: tokenRetriever,
-		}
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
+			}
 
-		getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
-			assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
-		}
-		settingsctx := backend.WithGrafanaConfig(ctx, backend.NewGrafanaCfg(map[string]string{
-			"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
-			"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
-		}))
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: &backend.User{},
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
 
-		_, err = provider.GetAccessToken(settingsctx, scopes)
-		require.NoError(t, err)
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.NoError(t, err)
+		})
+
+		t.Run("will be treated as a backend request if current user context is empty", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:     &tokenCacheFake{},
+				tokenRetriever: &clientSecretTokenRetriever{},
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.NoError(t, err)
+		})
+
+		t.Run("will be treated as a backend request if current user is nil", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:     &tokenCacheFake{},
+				tokenRetriever: &clientSecretTokenRetriever{},
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: nil,
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.NoError(t, err)
+		})
+
+		t.Run("will not use fallback credentials if username assertion enabled and fallback credentials enabled", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:        &tokenCacheFake{},
+				tokenRetriever:    &clientSecretTokenRetriever{},
+				usernameAssertion: true,
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: nil,
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.Error(t, err)
+			require.ErrorContains(t, err, "fallback credentials not enabled")
+		})
+
+		t.Run("will not use fallback credentials if disabled", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:     &tokenCacheFake{},
+				tokenRetriever: &clientSecretTokenRetriever{},
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: nil,
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "false",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.Error(t, err)
+			require.ErrorContains(t, err, "fallback credentials not enabled")
+		})
+
+		t.Run("should use clientSecretTokenRetriever when service principal credentials are enabled", func(t *testing.T) {
+			tokenRetriever, _ := getClientSecretTokenRetriever(&azsettings.AzureSettings{UserIdentityFallbackCredentialsEnabled: true}, mockClientSecretCredentials)
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:     &tokenCacheFake{},
+				tokenRetriever: tokenRetriever,
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: nil,
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.NoError(t, err)
+		})
+
+		t.Run("should use msiTokenRetriever when service principal credentials are enabled", func(t *testing.T) {
+			tokenRetriever := getManagedIdentityTokenRetriever(&azsettings.AzureSettings{UserIdentityFallbackCredentialsEnabled: true, ManagedIdentityEnabled: true, ManagedIdentityClientId: "test-msi"}, mockMsiCredentials)
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:     &tokenCacheFake{},
+				tokenRetriever: tokenRetriever,
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &managedIdentityTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: nil,
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.NoError(t, err)
+		})
+
+		t.Run("should use workloadIdentityTokenRetriever when service principal credentials are enabled", func(t *testing.T) {
+			tokenRetriever := getWorkloadIdentityTokenRetriever(&azsettings.AzureSettings{UserIdentityFallbackCredentialsEnabled: true, WorkloadIdentityEnabled: true, WorkloadIdentitySettings: &azsettings.WorkloadIdentitySettings{
+				TenantId:  "test-tenant-id",
+				ClientId:  "test-client-id",
+				TokenFile: "test-token-file",
+			}}, mockWorkloadIdentityCredentials)
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:     &tokenCacheFake{},
+				tokenRetriever: tokenRetriever,
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &workloadIdentityTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: nil,
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.NoError(t, err)
+		})
+
 	})
+
 }
