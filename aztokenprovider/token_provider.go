@@ -76,7 +76,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 
 		var tokenRetriever TokenRetriever
 
-		if c.ServiceCredentials != nil && settings.UserIdentityFallbackCredentialsEnabled {
+		if c.ServiceCredentialsEnabled && c.ServiceCredentials != nil && settings.UserIdentityFallbackCredentialsEnabled {
 			fallbackType := c.ServiceCredentials.AzureAuthType()
 			if fallbackType == azcredentials.AzureAuthCurrentUserIdentity || fallbackType == azcredentials.AzureAuthClientSecretObo {
 				return nil, fmt.Errorf("user identity authentication not valid for fallback credentials")

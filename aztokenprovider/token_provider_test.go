@@ -167,7 +167,8 @@ func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 	t.Run("should return user provider with service principal credentials when user identity configured", func(t *testing.T) {
 
 		provider, err := NewAzureAccessTokenProvider(settings, &azcredentials.AadCurrentUserCredentials{
-			ServiceCredentials: mockClientSecretCredentials,
+			ServiceCredentialsEnabled: true,
+			ServiceCredentials:        mockClientSecretCredentials,
 		}, true)
 		require.NoError(t, err)
 		require.IsType(t, &userTokenProvider{}, provider)
@@ -176,7 +177,8 @@ func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 	t.Run("should error if fallback credentials set to user credentials", func(t *testing.T) {
 
 		_, err := NewAzureAccessTokenProvider(settingsFallbackEnabled, &azcredentials.AadCurrentUserCredentials{
-			ServiceCredentials: &azcredentials.AadCurrentUserCredentials{},
+			ServiceCredentialsEnabled: true,
+			ServiceCredentials:        &azcredentials.AadCurrentUserCredentials{},
 		}, true)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "user identity authentication not valid for fallback credentials")
@@ -185,7 +187,8 @@ func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 	t.Run("should error if fallback credentials set to OBO credentials", func(t *testing.T) {
 
 		_, err := NewAzureAccessTokenProvider(settingsFallbackEnabled, &azcredentials.AadCurrentUserCredentials{
-			ServiceCredentials: &azcredentials.AzureClientSecretOboCredentials{},
+			ServiceCredentialsEnabled: true,
+			ServiceCredentials:        &azcredentials.AzureClientSecretOboCredentials{},
 		}, true)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "user identity authentication not valid for fallback credentials")
