@@ -24,7 +24,26 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 
 	switch authType {
 	case AzureAuthCurrentUserIdentity:
-		credentials := &AadCurrentUserCredentials{}
+		serviceCredentialsEnabled, err := maputil.GetBoolOptional(credentialsObj, "serviceCredentialsEnabled")
+		if err != nil {
+			return nil, err
+		}
+
+		var fallbackCredentials AzureCredentials
+		if serviceCredentialsEnabled {
+			creds, err := maputil.GetMapOptional(credentialsObj, "serviceCredentials")
+			if err != nil {
+				return nil, err
+			}
+			fallbackCredentials, err = getFromCredentialsObject(creds, secureData)
+			if err != nil {
+				return nil, err
+			}
+		}
+		credentials := &AadCurrentUserCredentials{
+			ServiceCredentialsEnabled: serviceCredentialsEnabled,
+			ServiceCredentials:        fallbackCredentials,
+		}
 		return credentials, nil
 
 	case AzureAuthManagedIdentity:
