@@ -43,26 +43,28 @@ func TestSettingsFromContext(t *testing.T) {
 			{
 				name: "azure settings in config",
 				cfg: backend.NewGrafanaCfg(map[string]string{
-					AzureCloud:                AzurePublic,
-					AzureAuthEnabled:          "true",
-					ManagedIdentityEnabled:    "true",
-					ManagedIdentityClientID:   "mock_managed_identity_client_id",
-					UserIdentityEnabled:       "true",
-					UserIdentityClientID:      "mock_user_identity_client_id",
-					UserIdentityClientSecret:  "mock_managed_identity_client_secret",
-					UserIdentityTokenURL:      "mock_managed_identity_token_url",
-					UserIdentityAssertion:     "username",
-					WorkloadIdentityEnabled:   "true",
-					WorkloadIdentityClientID:  "mock_workload_identity_client_id",
-					WorkloadIdentityTenantID:  "mock_workload_identity_tenant_id",
-					WorkloadIdentityTokenFile: "mock_workload_identity_token_file",
+					AzureCloud:                             AzurePublic,
+					AzureAuthEnabled:                       "true",
+					ManagedIdentityEnabled:                 "true",
+					ManagedIdentityClientID:                "mock_managed_identity_client_id",
+					UserIdentityEnabled:                    "true",
+					UserIdentityClientID:                   "mock_user_identity_client_id",
+					UserIdentityClientSecret:               "mock_managed_identity_client_secret",
+					UserIdentityTokenURL:                   "mock_managed_identity_token_url",
+					UserIdentityAssertion:                  "username",
+					UserIdentityFallbackCredentialsEnabled: "true",
+					WorkloadIdentityEnabled:                "true",
+					WorkloadIdentityClientID:               "mock_workload_identity_client_id",
+					WorkloadIdentityTenantID:               "mock_workload_identity_tenant_id",
+					WorkloadIdentityTokenFile:              "mock_workload_identity_token_file",
 				}),
 				expectedAzure: &AzureSettings{
-					Cloud:                   AzurePublic,
-					AzureAuthEnabled:        true,
-					ManagedIdentityEnabled:  true,
-					ManagedIdentityClientId: "mock_managed_identity_client_id",
-					UserIdentityEnabled:     true,
+					Cloud:                                  AzurePublic,
+					AzureAuthEnabled:                       true,
+					ManagedIdentityEnabled:                 true,
+					ManagedIdentityClientId:                "mock_managed_identity_client_id",
+					UserIdentityEnabled:                    true,
+					UserIdentityFallbackCredentialsEnabled: true,
 					UserIdentityTokenEndpoint: &TokenEndpointSettings{
 						ClientId:          "mock_user_identity_client_id",
 						ClientSecret:      "mock_managed_identity_client_secret",
@@ -92,10 +94,11 @@ func TestSettingsFromContext(t *testing.T) {
 
 func TestReadSettings(t *testing.T) {
 	expectedAzureContextSettings := &AzureSettings{
-		Cloud:                   AzurePublic,
-		ManagedIdentityEnabled:  true,
-		ManagedIdentityClientId: "mock_managed_identity_client_id",
-		UserIdentityEnabled:     true,
+		Cloud:                                  AzurePublic,
+		ManagedIdentityEnabled:                 true,
+		ManagedIdentityClientId:                "mock_managed_identity_client_id",
+		UserIdentityEnabled:                    true,
+		UserIdentityFallbackCredentialsEnabled: false,
 		UserIdentityTokenEndpoint: &TokenEndpointSettings{
 			ClientId:          "mock_user_identity_client_id",
 			ClientSecret:      "mock_managed_identity_client_secret",
@@ -111,10 +114,11 @@ func TestReadSettings(t *testing.T) {
 	}
 
 	expectedAzureEnvSettings := &AzureSettings{
-		Cloud:                   "ENV_CLOUD",
-		ManagedIdentityEnabled:  true,
-		ManagedIdentityClientId: "ENV_MI_CLIENT_ID",
-		UserIdentityEnabled:     true,
+		Cloud:                                  "ENV_CLOUD",
+		ManagedIdentityEnabled:                 true,
+		ManagedIdentityClientId:                "ENV_MI_CLIENT_ID",
+		UserIdentityEnabled:                    true,
+		UserIdentityFallbackCredentialsEnabled: false,
 		UserIdentityTokenEndpoint: &TokenEndpointSettings{
 			ClientId:          "ENV_UI_CLIENT_ID",
 			ClientSecret:      "ENV_UI_CLIENT_SECRET",
@@ -145,6 +149,8 @@ func TestReadSettings(t *testing.T) {
 	defer unsetUITokenURL()
 	unsetUIAssertion, _ := setEnvVar(UserIdentityAssertion, "username")
 	defer unsetUIAssertion()
+	unsetUIServiceCredentials, _ := setEnvVar(UserIdentityFallbackCredentialsEnabled, "false")
+	defer unsetUIServiceCredentials()
 	unsetWIEnabled, _ := setEnvVar(WorkloadIdentityEnabled, "true")
 	defer unsetWIEnabled()
 	unsetWIClientID, _ := setEnvVar(WorkloadIdentityClientID, "ENV_WI_CLIENT_ID")
@@ -165,18 +171,19 @@ func TestReadSettings(t *testing.T) {
 			{
 				name: "read from context",
 				cfg: backend.NewGrafanaCfg(map[string]string{
-					AzureCloud:                AzurePublic,
-					ManagedIdentityEnabled:    "true",
-					ManagedIdentityClientID:   "mock_managed_identity_client_id",
-					UserIdentityEnabled:       "true",
-					UserIdentityClientID:      "mock_user_identity_client_id",
-					UserIdentityClientSecret:  "mock_managed_identity_client_secret",
-					UserIdentityTokenURL:      "mock_managed_identity_token_url",
-					UserIdentityAssertion:     "username",
-					WorkloadIdentityEnabled:   "true",
-					WorkloadIdentityClientID:  "mock_workload_identity_client_id",
-					WorkloadIdentityTenantID:  "mock_workload_identity_tenant_id",
-					WorkloadIdentityTokenFile: "mock_workload_identity_token_file",
+					AzureCloud:                             AzurePublic,
+					ManagedIdentityEnabled:                 "true",
+					ManagedIdentityClientID:                "mock_managed_identity_client_id",
+					UserIdentityEnabled:                    "true",
+					UserIdentityClientID:                   "mock_user_identity_client_id",
+					UserIdentityClientSecret:               "mock_managed_identity_client_secret",
+					UserIdentityTokenURL:                   "mock_managed_identity_token_url",
+					UserIdentityAssertion:                  "username",
+					UserIdentityFallbackCredentialsEnabled: "false",
+					WorkloadIdentityEnabled:                "true",
+					WorkloadIdentityClientID:               "mock_workload_identity_client_id",
+					WorkloadIdentityTenantID:               "mock_workload_identity_tenant_id",
+					WorkloadIdentityTokenFile:              "mock_workload_identity_token_file",
 				}),
 				expectedAzure: expectedAzureContextSettings,
 				expectedError: nil,

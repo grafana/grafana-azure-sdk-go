@@ -16,8 +16,9 @@ type AzureSettings struct {
 	WorkloadIdentityEnabled  bool
 	WorkloadIdentitySettings *WorkloadIdentitySettings
 
-	UserIdentityEnabled       bool
-	UserIdentityTokenEndpoint *TokenEndpointSettings
+	UserIdentityEnabled                    bool
+	UserIdentityTokenEndpoint              *TokenEndpointSettings
+	UserIdentityFallbackCredentialsEnabled bool
 
 	// This field determines which plugins will receive the settings via plugin context
 	ForwardSettingsPlugins []string
@@ -79,6 +80,7 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		hasSettings = true
 
 		settings.UserIdentityTokenEndpoint = &TokenEndpointSettings{}
+		settings.UserIdentityFallbackCredentialsEnabled = true
 
 		if v := cfg.Get(UserIdentityClientID); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientId = v
@@ -91,6 +93,9 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		}
 		if v := cfg.Get(UserIdentityAssertion); v == "username" {
 			settings.UserIdentityTokenEndpoint.UsernameAssertion = true
+		}
+		if v := cfg.Get(UserIdentityFallbackCredentialsEnabled); v == strconv.FormatBool(false) {
+			settings.UserIdentityFallbackCredentialsEnabled = false
 		}
 	}
 

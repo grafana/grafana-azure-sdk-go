@@ -10,9 +10,10 @@ type userCtxKey struct {
 }
 
 type CurrentUserContext struct {
-	User        *backend.User
-	IdToken     string
-	AccessToken string
+	User           *backend.User
+	IdToken        string
+	AccessToken    string
+	GrafanaIdToken string
 }
 
 func WithCurrentUser(ctx context.Context, currentUser CurrentUserContext) context.Context {

@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/azsettings"
 	"github.com/grafana/grafana-azure-sdk-go/azusercontext"
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
 var (
@@ -71,6 +73,27 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			err = fmt.Errorf("user identity authentication is not enabled in Grafana config")
 			return nil, err
 		}
+
+		var tokenRetriever TokenRetriever
+
+		if c.ServiceCredentialsEnabled && c.ServiceCredentials != nil && settings.UserIdentityFallbackCredentialsEnabled {
+			fallbackType := c.ServiceCredentials.AzureAuthType()
+			if fallbackType == azcredentials.AzureAuthCurrentUserIdentity || fallbackType == azcredentials.AzureAuthClientSecretObo {
+				return nil, fmt.Errorf("user identity authentication not valid for fallback credentials")
+			}
+			switch c.ServiceCredentials.(type) {
+			case *azcredentials.AzureClientSecretCredentials:
+				tokenRetriever, err = getClientSecretTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureClientSecretCredentials))
+				if err != nil {
+					return nil, err
+				}
+			case *azcredentials.AzureManagedIdentityCredentials:
+				tokenRetriever = getManagedIdentityTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureManagedIdentityCredentials))
+			case *azcredentials.AzureWorkloadIdentityCredentials:
+				tokenRetriever = getWorkloadIdentityTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureWorkloadIdentityCredentials))
+
+			}
+		}
 		tokenEndpoint := settings.UserIdentityTokenEndpoint
 		client, err := NewTokenClient(tokenEndpoint.TokenUrl, tokenEndpoint.ClientId, tokenEndpoint.ClientSecret, http.DefaultClient)
 		if err != nil {
@@ -81,6 +104,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			tokenCache:        azureTokenCache,
 			client:            client,
 			usernameAssertion: tokenEndpoint.UsernameAssertion,
+			tokenRetriever:    tokenRetriever,
 		}, nil
 	default:
 		err = fmt.Errorf("credentials of type '%s' not supported by Azure authentication provider", c.AzureAuthType())
@@ -114,6 +138,39 @@ type userTokenProvider struct {
 	tokenCache        ConcurrentTokenCache
 	client            TokenClient
 	usernameAssertion bool
+	tokenRetriever    TokenRetriever
+}
+
+func isAzureUser(currentUser azusercontext.CurrentUserContext) (azusercontext.CurrentUserContext, error) {
+	// This should always be present for logged in users. idForwarding feature toggle must be enabled. By default we return true if there's no ID token available
+	if currentUser.GrafanaIdToken != "" {
+		claims := jwt.MapClaims{}
+		_, _, err := jwt.NewParser(jwt.WithValidMethods([]string{"ES256"})).ParseUnverified(currentUser.GrafanaIdToken, claims)
+		if err != nil {
+			return currentUser, fmt.Errorf("failed to decode user jwt: %s", err)
+		}
+		if claims["authenticatedBy"] != "oauth_azuread" {
+			return currentUser, fmt.Errorf("user is not authenticated with Azure AD")
+		}
+
+		return currentUser, nil
+	}
+
+	return currentUser, nil
+}
+
+func isBackendRequest(currentUser azusercontext.CurrentUserContext, idForwardingEnabled bool) bool {
+	// If the User struct is nil or there is no ID token then it's a backend initiated request
+	if currentUser.User == nil {
+		return true
+	}
+
+	// If ID forwarding is enabled we can assume this is backend initiated when empty
+	if currentUser.GrafanaIdToken == "" && idForwardingEnabled {
+		return true
+	}
+
+	return false
 }
 
 func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []string) (string, error) {
@@ -125,14 +182,41 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 		err := fmt.Errorf("parameter 'scopes' cannot be nil")
 		return "", err
 	}
-
-	currentUser, ok := azusercontext.GetCurrentUser(ctx)
-	if !ok {
-		err := fmt.Errorf("user context not configured")
+	settings, err := azsettings.ReadSettings(ctx)
+	if err != nil {
+		err := fmt.Errorf("error reading azure settings: %s", err)
 		return "", err
 	}
 
-	username, err := extractUsername(currentUser)
+	currentUser, ok := azusercontext.GetCurrentUser(ctx)
+	if !ok {
+		return "", fmt.Errorf("user context not configured")
+	}
+
+	idForwardingSupported := backend.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled("idForwarding")
+	backendRequest := isBackendRequest(currentUser, idForwardingSupported)
+
+	if backendRequest {
+		// Use fallback credentials if this is a backend request and fallback credentials are enabled
+		if settings.UserIdentityFallbackCredentialsEnabled && !provider.usernameAssertion {
+			if provider.tokenRetriever != nil {
+				accessToken, err := provider.tokenCache.GetAccessToken(ctx, provider.tokenRetriever, scopes)
+				if err != nil {
+					return "", err
+				}
+				return accessToken, nil
+			}
+		}
+
+		return "", fmt.Errorf("fallback credentials not enabled")
+	}
+
+	azureUser, err := isAzureUser(currentUser)
+	if err != nil {
+		return "", err
+	}
+
+	username, err := extractUsername(azureUser)
 	if err != nil {
 		err := fmt.Errorf("user identity authentication only possible in context of a Grafana user: %w", err)
 		return "", err
@@ -145,7 +229,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 			username: username,
 		}
 	} else {
-		idToken := currentUser.IdToken
+		idToken := azureUser.IdToken
 		if idToken == "" {
 			err := fmt.Errorf("user identity authentication not possible because there's no ID token associated with the Grafana user")
 			return "", err
