@@ -52,6 +52,21 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 
 	case AzureAuthWorkloadIdentity:
 		credentials := &AzureWorkloadIdentityCredentials{}
+		tenantId, err := maputil.GetStringOptional(credentialsObj, "tenantId")
+		if err != nil {
+			return nil, err
+		}
+		if tenantId != "" {
+			credentials.TenantId = tenantId
+		}
+		clientId, err := maputil.GetStringOptional(credentialsObj, "clientId")
+		if err != nil {
+			return nil, err
+		}
+		if clientId != "" {
+			credentials.ClientId = clientId
+		}
+
 		return credentials, nil
 
 	case AzureAuthClientSecret:
