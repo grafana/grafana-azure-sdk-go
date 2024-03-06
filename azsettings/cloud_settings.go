@@ -1,8 +1,6 @@
 package azsettings
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type AzureCloudInfo struct {
 	Name        string
@@ -55,20 +53,6 @@ var predefinedClouds = []*AzureCloudSettings{
 	},
 }
 
-func (*AzureSettings) Clouds() []AzureCloudInfo {
-	clouds := getClouds()
-
-	results := make([]AzureCloudInfo, 0, len(clouds))
-	for _, cloud := range clouds {
-		results = append(results, AzureCloudInfo{
-			Name:        cloud.Name,
-			DisplayName: cloud.DisplayName,
-		})
-	}
-
-	return results
-}
-
 func (*AzureSettings) GetCloud(cloudName string) (*AzureCloudSettings, error) {
 	clouds := getClouds()
 
@@ -81,6 +65,36 @@ func (*AzureSettings) GetCloud(cloudName string) (*AzureCloudSettings, error) {
 	return nil, fmt.Errorf("the Azure cloud '%s' not supported", cloudName)
 }
 
+func (*AzureSettings) Clouds() []AzureCloudInfo {
+	clouds := getClouds()
+	return mapCloudInfo(clouds)
+}
+
+func (*AzureSettings) ConfiguredClouds() []AzureCloudInfo {
+	clouds := getConfiguredClouds()
+	return mapCloudInfo(clouds)
+}
+
+func mapCloudInfo(clouds []*AzureCloudSettings) []AzureCloudInfo {
+	results := make([]AzureCloudInfo, 0, len(clouds))
+	for _, cloud := range clouds {
+		results = append(results, AzureCloudInfo{
+			Name:        cloud.Name,
+			DisplayName: cloud.DisplayName,
+		})
+	}
+	return results
+}
+
 func getClouds() []*AzureCloudSettings {
+	if clouds := getConfiguredClouds(); len(clouds) > 0 {
+		return clouds
+	}
+
 	return predefinedClouds
+}
+
+func getConfiguredClouds() []*AzureCloudSettings {
+	// Configuration of Azure clouds not yet supported
+	return nil
 }
