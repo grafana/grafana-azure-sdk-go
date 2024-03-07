@@ -14,11 +14,13 @@ func WithUserFromQueryReq(ctx context.Context, req *backend.QueryDataRequest) co
 
 	idToken := getQueryReqHeader(req, "X-ID-Token")
 	accessToken := extractBearerToken(getQueryReqHeader(req, "Authorization"))
+	grafanaIdToken := getQueryReqHeader(req, "http_X-Grafana-Id")
 
 	currentUser := CurrentUserContext{
-		User:        req.PluginContext.User,
-		IdToken:     idToken,
-		AccessToken: accessToken,
+		User:           req.PluginContext.User,
+		IdToken:        idToken,
+		AccessToken:    accessToken,
+		GrafanaIdToken: grafanaIdToken,
 	}
 
 	return WithCurrentUser(ctx, currentUser)
@@ -31,11 +33,13 @@ func WithUserFromResourceReq(ctx context.Context, req *backend.CallResourceReque
 
 	idToken := getResourceReqHeader(req, "X-ID-Token")
 	accessToken := extractBearerToken(getResourceReqHeader(req, "Authorization"))
+	grafanaIdToken := getResourceReqHeader(req, "X-Grafana-Id")
 
 	currentUser := CurrentUserContext{
-		User:        req.PluginContext.User,
-		IdToken:     idToken,
-		AccessToken: accessToken,
+		User:           req.PluginContext.User,
+		IdToken:        idToken,
+		AccessToken:    accessToken,
+		GrafanaIdToken: grafanaIdToken,
 	}
 
 	return WithCurrentUser(ctx, currentUser)
@@ -48,11 +52,13 @@ func WithUserFromHealthCheckReq(ctx context.Context, req *backend.CheckHealthReq
 
 	idToken := getCheckHealthReqHeader(req, "X-ID-Token")
 	accessToken := extractBearerToken(getCheckHealthReqHeader(req, "Authorization"))
+	grafanaIdToken := getCheckHealthReqHeader(req, "http_X-Grafana-Id")
 
 	currentUser := CurrentUserContext{
-		User:        req.PluginContext.User,
-		IdToken:     idToken,
-		AccessToken: accessToken,
+		User:           req.PluginContext.User,
+		IdToken:        idToken,
+		AccessToken:    accessToken,
+		GrafanaIdToken: grafanaIdToken,
 	}
 
 	return WithCurrentUser(ctx, currentUser)

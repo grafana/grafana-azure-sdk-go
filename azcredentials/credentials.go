@@ -3,6 +3,7 @@ package azcredentials
 const (
 	AzureAuthCurrentUserIdentity = "currentuser"
 	AzureAuthManagedIdentity     = "msi"
+	AzureAuthWorkloadIdentity    = "workloadidentity"
 	AzureAuthClientSecret        = "clientsecret"
 	AzureAuthClientSecretObo     = "clientsecret-obo"
 )
@@ -13,12 +14,18 @@ type AzureCredentials interface {
 
 // AadCurrentUserCredentials "Current User" user identity credentials of the current Grafana user.
 type AadCurrentUserCredentials struct {
+	ServiceCredentialsEnabled bool
+	ServiceCredentials        AzureCredentials
 }
 
 // AzureManagedIdentityCredentials "Managed Identity" service managed identity credentials configured
 // for the current Grafana instance.
 type AzureManagedIdentityCredentials struct {
 	ClientId string
+}
+
+// AzureWorkloadIdentityCredentials Uses Azure AD Workload Identity
+type AzureWorkloadIdentityCredentials struct {
 }
 
 // AzureClientSecretCredentials "App Registration" AAD service identity credentials configured in the datasource.
@@ -42,6 +49,10 @@ func (credentials *AadCurrentUserCredentials) AzureAuthType() string {
 
 func (credentials *AzureManagedIdentityCredentials) AzureAuthType() string {
 	return AzureAuthManagedIdentity
+}
+
+func (credentials *AzureWorkloadIdentityCredentials) AzureAuthType() string {
+	return AzureAuthWorkloadIdentity
 }
 
 func (credentials *AzureClientSecretCredentials) AzureAuthType() string {

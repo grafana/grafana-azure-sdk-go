@@ -34,6 +34,117 @@ func TestFromDatasourceData(t *testing.T) {
 		assert.IsType(t, &AadCurrentUserCredentials{}, result)
 	})
 
+	t.Run("should return current user credentials with service credentials (client secret)", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":                  "currentuser",
+				"serviceCredentialsEnabled": true,
+				"serviceCredentials": map[string]interface{}{
+					"authType":   "clientsecret",
+					"azureCloud": "AzureCloud",
+					"tenantId":   "TENANT-ID",
+					"clientId":   "CLIENT-ID",
+				},
+			},
+		}
+		var secureData = map[string]string{
+			"azureClientSecret": "FAKE-SECRET",
+		}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		assert.IsType(t, &AadCurrentUserCredentials{}, result)
+
+		credential := result.(*AadCurrentUserCredentials)
+		serviceCredential := credential.ServiceCredentials
+
+		assert.Equal(t, credential.ServiceCredentialsEnabled, true)
+		assert.NotNil(t, credential.ServiceCredentials)
+		assert.IsType(t, &AzureClientSecretCredentials{}, serviceCredential)
+		assert.Equal(t, serviceCredential.(*AzureClientSecretCredentials).ClientId, "CLIENT-ID")
+		assert.Equal(t, serviceCredential.(*AzureClientSecretCredentials).TenantId, "TENANT-ID")
+		assert.Equal(t, serviceCredential.(*AzureClientSecretCredentials).ClientSecret, "FAKE-SECRET")
+		assert.Equal(t, serviceCredential.(*AzureClientSecretCredentials).AzureCloud, "AzureCloud")
+	})
+
+	t.Run("should return current user credentials with service credentials (workload identity)", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":                  "currentuser",
+				"serviceCredentialsEnabled": true,
+				"serviceCredentials": map[string]interface{}{
+					"authType": "workloadidentity",
+				},
+			},
+		}
+		var secureData = map[string]string{}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		assert.IsType(t, &AadCurrentUserCredentials{}, result)
+
+		credential := result.(*AadCurrentUserCredentials)
+		serviceCredential := credential.ServiceCredentials
+
+		assert.Equal(t, credential.ServiceCredentialsEnabled, true)
+		assert.NotNil(t, credential.ServiceCredentials)
+		assert.IsType(t, &AzureWorkloadIdentityCredentials{}, serviceCredential)
+	})
+
+	t.Run("should return current user credentials with service credentials (managed identity)", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":                  "currentuser",
+				"serviceCredentialsEnabled": true,
+				"serviceCredentials": map[string]interface{}{
+					"authType": "msi",
+				},
+			},
+		}
+		var secureData = map[string]string{}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		assert.IsType(t, &AadCurrentUserCredentials{}, result)
+
+		credential := result.(*AadCurrentUserCredentials)
+		serviceCredential := credential.ServiceCredentials
+
+		assert.Equal(t, credential.ServiceCredentialsEnabled, true)
+		assert.NotNil(t, credential.ServiceCredentials)
+		assert.IsType(t, &AzureManagedIdentityCredentials{}, serviceCredential)
+	})
+
+	t.Run("should return current user credentials without service credentials if disabled", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":                  "currentuser",
+				"serviceCredentialsEnabled": false,
+				"serviceCredentials": map[string]interface{}{
+					"authType": "msi",
+				},
+			},
+		}
+		var secureData = map[string]string{}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		assert.IsType(t, &AadCurrentUserCredentials{}, result)
+
+		credential := result.(*AadCurrentUserCredentials)
+
+		assert.Equal(t, credential.ServiceCredentialsEnabled, false)
+		assert.Nil(t, credential.ServiceCredentials)
+	})
+
 	t.Run("should return managed identity credentials when managed identity auth configured", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
@@ -51,6 +162,21 @@ func TestFromDatasourceData(t *testing.T) {
 
 		// ClientId currently not parsed
 		assert.Equal(t, credential.ClientId, "")
+	})
+
+	t.Run("should return workload identity credentials when workload identity auth configured", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType": "workloadidentity",
+			},
+		}
+		var secureData = map[string]string{}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		assert.IsType(t, &AzureWorkloadIdentityCredentials{}, result)
 	})
 
 	t.Run("should return client secret credentials when client secret auth configured", func(t *testing.T) {

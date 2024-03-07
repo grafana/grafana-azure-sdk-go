@@ -1,12 +1,33 @@
 package azsettings
 
+import (
+	"context"
+	"strconv"
+
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
+)
+
 type AzureSettings struct {
+	AzureAuthEnabled        bool
 	Cloud                   string
 	ManagedIdentityEnabled  bool
 	ManagedIdentityClientId string
 
-	UserIdentityEnabled       bool
-	UserIdentityTokenEndpoint *TokenEndpointSettings
+	WorkloadIdentityEnabled  bool
+	WorkloadIdentitySettings *WorkloadIdentitySettings
+
+	UserIdentityEnabled                    bool
+	UserIdentityTokenEndpoint              *TokenEndpointSettings
+	UserIdentityFallbackCredentialsEnabled bool
+
+	// This field determines which plugins will receive the settings via plugin context
+	ForwardSettingsPlugins []string
+}
+
+type WorkloadIdentitySettings struct {
+	TenantId  string
+	ClientId  string
+	TokenFile string
 }
 
 type TokenEndpointSettings struct {
@@ -24,4 +45,91 @@ func (settings *AzureSettings) GetDefaultCloud() string {
 		return AzurePublic
 	}
 	return cloudName
+}
+
+// Changes here are dependant on https://github.com/grafana/grafana/tree/main/pkg/plugins/envvars/envvars.go#L148
+func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
+	cfg := backend.GrafanaConfigFromContext(ctx)
+	settings := &AzureSettings{}
+
+	if cfg == nil {
+		return settings, false
+	}
+
+	if v := cfg.Get(AzureAuthEnabled); v == strconv.FormatBool(true) {
+		settings.AzureAuthEnabled = true
+	}
+
+	hasSettings := false
+	if v := cfg.Get(AzureCloud); v != "" {
+		settings.Cloud = v
+		hasSettings = true
+	}
+
+	if v := cfg.Get(ManagedIdentityEnabled); v == strconv.FormatBool(true) {
+		settings.ManagedIdentityEnabled = true
+		hasSettings = true
+
+		if v := cfg.Get(ManagedIdentityClientID); v != "" {
+			settings.ManagedIdentityClientId = v
+		}
+	}
+
+	if v := cfg.Get(UserIdentityEnabled); v == strconv.FormatBool(true) {
+		settings.UserIdentityEnabled = true
+		hasSettings = true
+
+		settings.UserIdentityTokenEndpoint = &TokenEndpointSettings{}
+		settings.UserIdentityFallbackCredentialsEnabled = true
+
+		if v := cfg.Get(UserIdentityClientID); v != "" {
+			settings.UserIdentityTokenEndpoint.ClientId = v
+		}
+		if v := cfg.Get(UserIdentityClientSecret); v != "" {
+			settings.UserIdentityTokenEndpoint.ClientSecret = v
+		}
+		if v := cfg.Get(UserIdentityTokenURL); v != "" {
+			settings.UserIdentityTokenEndpoint.TokenUrl = v
+		}
+		if v := cfg.Get(UserIdentityAssertion); v == "username" {
+			settings.UserIdentityTokenEndpoint.UsernameAssertion = true
+		}
+		if v := cfg.Get(UserIdentityFallbackCredentialsEnabled); v == strconv.FormatBool(false) {
+			settings.UserIdentityFallbackCredentialsEnabled = false
+		}
+	}
+
+	if v := cfg.Get(WorkloadIdentityEnabled); v == strconv.FormatBool(true) {
+		settings.WorkloadIdentityEnabled = true
+		hasSettings = true
+
+		settings.WorkloadIdentitySettings = &WorkloadIdentitySettings{}
+
+		if v := cfg.Get(WorkloadIdentityClientID); v != "" {
+			settings.WorkloadIdentitySettings.ClientId = v
+		}
+		if v := cfg.Get(WorkloadIdentityTenantID); v != "" {
+			settings.WorkloadIdentitySettings.TenantId = v
+		}
+		if v := cfg.Get(WorkloadIdentityTokenFile); v != "" {
+			settings.WorkloadIdentitySettings.TokenFile = v
+		}
+	}
+
+	return settings, hasSettings
+}
+
+func ReadSettings(ctx context.Context) (*AzureSettings, error) {
+	azSettings, exists := ReadFromContext(ctx)
+
+	if !exists {
+		azSettings, err := ReadFromEnv()
+		if err != nil {
+			return nil, err
+		}
+
+		return azSettings, nil
+	}
+
+	return azSettings, nil
 }
