@@ -62,7 +62,7 @@ func (*AzureSettings) GetCloud(cloudName string) (*AzureCloudSettings, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("the Azure cloud '%s' not supported", cloudName)
+	return nil, fmt.Errorf("the Azure cloud '%s' is not supported", cloudName)
 }
 
 func (*AzureSettings) Clouds() []AzureCloudInfo {
