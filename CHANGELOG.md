@@ -1,6 +1,6 @@
 # Change Log
 
-## v1.13.2
+## v2.0.0
 
 - **Breaking change:** `mapUtil` is removed [#106](https://github.com/grafana/grafana-azure-sdk-go/pull/106). `mapUtil` functions moved to 
   [grafana-plugin-sdk-go](https://github.com/grafana/grafana-plugin-sdk-go/tree/main/data/utils/maputil)
