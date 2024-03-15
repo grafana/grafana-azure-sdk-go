@@ -46,6 +46,10 @@ func (c *fakeRetriever) GetAccessToken(ctx context.Context, scopes []string) (*A
 	return fakeAccessToken, nil
 }
 
+func (c *fakeRetriever) GetExpiry() *time.Time {
+	return nil
+}
+
 func TestConcurrentTokenCache_GetAccessToken(t *testing.T) {
 	ctx := context.Background()
 
