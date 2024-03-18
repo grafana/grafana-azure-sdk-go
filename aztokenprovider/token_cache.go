@@ -82,9 +82,10 @@ func (c *tokenCacheImpl) getEntryFor(ctx context.Context, credential TokenRetrie
 	expiry := entry.(*credentialCacheEntry).retriever.GetExpiry()
 	// Store new cache value if the current one has expired (only applies to OBO retriever)
 	if expiry != nil && !expiry.After(time.Now()) {
-		entry, _ = c.cache.LoadOrStore(key, &credentialCacheEntry{
+		c.cache.Store(key, &credentialCacheEntry{
 			retriever: credential,
 		})
+		entry, _ = c.cache.Load(key)
 	}
 
 	return entry.(*credentialCacheEntry)
