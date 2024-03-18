@@ -45,7 +45,7 @@ func (c *onBehalfOfTokenRetriever) GetExpiry() *time.Time {
 		}
 
 		expiry, err := claims.GetExpirationTime()
-		if err != nil {
+		if err != nil || expiry == nil {
 			// Unable to get expiration from existing token so store the new one in cache
 			return &time.Time{}
 		}
