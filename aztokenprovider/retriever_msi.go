@@ -3,6 +3,7 @@ package aztokenprovider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -57,4 +58,9 @@ func (c *managedIdentityTokenRetriever) GetAccessToken(ctx context.Context, scop
 	}
 
 	return &AccessToken{Token: accessToken.Token, ExpiresOn: accessToken.ExpiresOn}, nil
+}
+
+// Empty implementation
+func (c *managedIdentityTokenRetriever) GetExpiry() *time.Time {
+	return nil
 }

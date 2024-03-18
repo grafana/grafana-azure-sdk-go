@@ -3,6 +3,7 @@ package aztokenprovider
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 type usernameTokenRetriever struct {
@@ -26,4 +27,9 @@ func (r *usernameTokenRetriever) GetAccessToken(ctx context.Context, scopes []st
 	}
 
 	return accessToken, nil
+}
+
+// Empty implementation
+func (c *usernameTokenRetriever) GetExpiry() *time.Time {
+	return nil
 }

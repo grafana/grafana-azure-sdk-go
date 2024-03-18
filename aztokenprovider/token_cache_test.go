@@ -16,8 +16,10 @@ type fakeRetriever struct {
 	key                string
 	initCalledTimes    int
 	calledTimes        int
+	expiryCalledTimes  int
 	initFunc           func() error
 	getAccessTokenFunc func(ctx context.Context, scopes []string) (*AccessToken, error)
+	getExpiryFunc      func() *time.Time
 }
 
 func (c *fakeRetriever) GetCacheKey(grafanaMultiTenantId string) string {
@@ -27,6 +29,7 @@ func (c *fakeRetriever) GetCacheKey(grafanaMultiTenantId string) string {
 func (c *fakeRetriever) Reset() {
 	c.initCalledTimes = 0
 	c.calledTimes = 0
+	c.expiryCalledTimes = 0
 }
 
 func (c *fakeRetriever) Init() error {
@@ -44,6 +47,15 @@ func (c *fakeRetriever) GetAccessToken(ctx context.Context, scopes []string) (*A
 	}
 	fakeAccessToken := &AccessToken{Token: fmt.Sprintf("%v-token-%v", c.key, c.calledTimes), ExpiresOn: timeNow().Add(time.Hour)}
 	return fakeAccessToken, nil
+}
+
+func (c *fakeRetriever) GetExpiry() *time.Time {
+	c.expiryCalledTimes = c.expiryCalledTimes + 1
+	if c.getExpiryFunc != nil {
+		return c.getExpiryFunc()
+	}
+
+	return nil
 }
 
 func TestConcurrentTokenCache_GetAccessToken(t *testing.T) {
@@ -454,4 +466,84 @@ func TestScopesCacheEntry_GetAccessToken(t *testing.T) {
 			assert.Equal(t, 2, tokenRetriever.calledTimes)
 		})
 	})
+}
+
+func TestTokenExpiry_GetAccessToken(t *testing.T) {
+	ctx := context.Background()
+	scopes := []string{"test-scope"}
+
+	t.Run("will not check expiry if no credential cached", func(t *testing.T) {
+		tokenRetriever := &fakeRetriever{
+			key: "credential",
+		}
+
+		cache := NewConcurrentTokenCache()
+		_, err := cache.GetAccessToken(ctx, tokenRetriever, scopes)
+
+		require.Nil(t, err)
+		require.Equal(t, tokenRetriever.expiryCalledTimes, 0)
+	})
+
+	t.Run("will check expiry if credential cached and will not store if expiry is nil", func(t *testing.T) {
+		credential := &fakeRetriever{key: "credential-1"}
+		cache := NewConcurrentTokenCache()
+		token1, err := cache.GetAccessToken(ctx, credential, scopes)
+		require.Nil(t, err)
+
+		token2, err := cache.GetAccessToken(ctx, credential, scopes)
+		require.Nil(t, err)
+		assert.Equal(t, "credential-1-token-1", token1)
+		require.Equal(t, token1, token2)
+		require.Equal(t, credential.expiryCalledTimes, 1)
+	})
+
+	t.Run("will check expiry if credential cached and will store if expiry is not nil (default return)", func(t *testing.T) {
+		credential := &fakeRetriever{key: "credential-1", getExpiryFunc: func() *time.Time {
+			return &time.Time{}
+		}}
+		cache := NewConcurrentTokenCache()
+		token1, err := cache.GetAccessToken(ctx, credential, scopes)
+		require.Nil(t, err)
+
+		token2, err := cache.GetAccessToken(ctx, credential, scopes)
+		require.Nil(t, err)
+		assert.Equal(t, "credential-1-token-1", token1)
+		require.NotEqual(t, token1, token2)
+		assert.Equal(t, "credential-1-token-2", token2)
+		require.Equal(t, credential.expiryCalledTimes, 1)
+	})
+
+	t.Run("will check expiry if credential cached and will not store if expiry is after now ", func(t *testing.T) {
+		credential := &fakeRetriever{key: "credential-1", getExpiryFunc: func() *time.Time {
+			expiry := time.Now().Add(1 * time.Hour)
+			return &expiry
+		}}
+		cache := NewConcurrentTokenCache()
+		token1, err := cache.GetAccessToken(ctx, credential, scopes)
+		require.Nil(t, err)
+
+		token2, err := cache.GetAccessToken(ctx, credential, scopes)
+		require.Nil(t, err)
+		assert.Equal(t, "credential-1-token-1", token1)
+		require.Equal(t, token1, token2)
+		require.Equal(t, credential.expiryCalledTimes, 1)
+	})
+
+	t.Run("will check expiry if credential cached and will store if expiry is before now ", func(t *testing.T) {
+		credential := &fakeRetriever{key: "credential-1", getExpiryFunc: func() *time.Time {
+			expiry := time.Now().Add(-20 * time.Minute)
+			return &expiry
+		}}
+		cache := NewConcurrentTokenCache()
+		token1, err := cache.GetAccessToken(ctx, credential, scopes)
+		require.Nil(t, err)
+
+		token2, err := cache.GetAccessToken(ctx, credential, scopes)
+		require.Nil(t, err)
+		assert.Equal(t, "credential-1-token-1", token1)
+		require.NotEqual(t, token1, token2)
+		assert.Equal(t, "credential-1-token-2", token2)
+		require.Equal(t, credential.expiryCalledTimes, 1)
+	})
+
 }
