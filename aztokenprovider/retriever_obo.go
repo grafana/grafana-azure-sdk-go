@@ -32,8 +32,6 @@ func (r *onBehalfOfTokenRetriever) GetAccessToken(ctx context.Context, scopes []
 	return accessToken, nil
 }
 
-func (c *onBehalfOfTokenRetriever) HasExpired() bool { return true }
-
 // Returns the expiry time from the ID token or the 0 time value (which will always be expired)
 func (c *onBehalfOfTokenRetriever) GetExpiry() *time.Time {
 	if c != nil && c.idToken != "" {
