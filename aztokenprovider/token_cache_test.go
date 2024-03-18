@@ -484,7 +484,7 @@ func TestTokenExpiry_GetAccessToken(t *testing.T) {
 		require.Equal(t, tokenRetriever.expiryCalledTimes, 0)
 	})
 
-	t.Run("will check expiry if credential cached and will store if expiry is nil", func(t *testing.T) {
+	t.Run("will check expiry if credential cached and will not store if expiry is nil", func(t *testing.T) {
 		credential := &fakeRetriever{key: "credential-1"}
 		cache := NewConcurrentTokenCache()
 		token1, err := cache.GetAccessToken(ctx, credential, scopes)
