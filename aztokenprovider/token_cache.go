@@ -27,6 +27,7 @@ type TokenRetriever interface {
 	GetCacheKey(grafanaMultiTenantId string) string
 	Init() error
 	GetAccessToken(ctx context.Context, scopes []string) (*AccessToken, error)
+	GetExpiry() *time.Time
 }
 
 type ConcurrentTokenCache interface {
@@ -42,6 +43,7 @@ type tokenCacheImpl struct {
 }
 type credentialCacheEntry struct {
 	retriever TokenRetriever
+	expiry    *time.Time
 
 	credInit  uint32
 	credMutex sync.Mutex
@@ -67,10 +69,23 @@ func (c *tokenCacheImpl) getEntryFor(ctx context.Context, credential TokenRetrie
 	tid := returnGrafanaMultiTenantId(ctx)
 
 	key := credential.GetCacheKey(tid)
-	if entry, ok = c.cache.Load(key); !ok {
+
+	entry, ok = c.cache.Load(key)
+	// Store new cache value if there isn't an existing one
+	if !ok {
 		entry, _ = c.cache.LoadOrStore(key, &credentialCacheEntry{
 			retriever: credential,
 		})
+		return entry.(*credentialCacheEntry)
+	}
+
+	expiry := entry.(*credentialCacheEntry).retriever.GetExpiry()
+	// Store new cache value if the current one has expired (only applies to OBO retriever)
+	if expiry != nil && !expiry.After(time.Now()) {
+		c.cache.Store(key, &credentialCacheEntry{
+			retriever: credential,
+		})
+		entry, _ = c.cache.Load(key)
 	}
 
 	return entry.(*credentialCacheEntry)

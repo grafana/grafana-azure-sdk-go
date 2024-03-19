@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
@@ -69,6 +70,11 @@ func (c *clientSecretTokenRetriever) GetAccessToken(ctx context.Context, scopes 
 	}
 
 	return &AccessToken{Token: accessToken.Token, ExpiresOn: accessToken.ExpiresOn}, nil
+}
+
+// Empty implementation
+func (c *clientSecretTokenRetriever) GetExpiry() *time.Time {
+	return nil
 }
 
 func hashSecret(secret string) string {
