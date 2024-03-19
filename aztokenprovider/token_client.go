@@ -154,7 +154,7 @@ func requestUrlForm(ctx context.Context, httpClient *http.Client, requestUrl str
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 	req.Header.Set("Accept", "application/json")
 
-	req.Header.Set("X-Client-SKU", "github.com/grafana/grafana-azure-sdk-go")
+	req.Header.Set("X-Client-SKU", "github.com/grafana/grafana-azure-sdk-go/v2")
 	req.Header.Set("X-Client-Ver", "2.0")
 
 	resp, err := httpClient.Do(req)

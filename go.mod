@@ -1,4 +1,4 @@
-module github.com/grafana/grafana-azure-sdk-go
+module github.com/grafana/grafana-azure-sdk-go/v2
 
 go 1.21
 
