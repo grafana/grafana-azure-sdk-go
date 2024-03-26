@@ -15,6 +15,7 @@ type AuthOptions struct {
 	endpoints             *azendpoint.EndpointAllowlist
 	scopes                []string
 	userIdentitySupported bool
+	rateLimitSession      bool
 	customProviders       map[string]AzureTokenProviderFactory
 }
 
@@ -48,6 +49,10 @@ func (opts *AuthOptions) AllowedEndpoints(endpoints []string) error {
 
 func (opts *AuthOptions) AllowUserIdentity() {
 	opts.userIdentitySupported = true
+}
+
+func (opts *AuthOptions) AddRateLimitSession(enable bool) {
+	opts.rateLimitSession = enable
 }
 
 func (opts *AuthOptions) AddTokenProvider(authType string, factory AzureTokenProviderFactory) {
