@@ -3,7 +3,7 @@ package azcredentials
 import (
 	"testing"
 
-	"github.com/grafana/grafana-azure-sdk-go/azsettings"
+	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -168,6 +168,8 @@ func TestFromDatasourceData(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
 				"authType": "workloadidentity",
+				"tenantId": "TENANT-ID",
+				"clientId": "CLIENT-ID",
 			},
 		}
 		var secureData = map[string]string{}
@@ -177,6 +179,10 @@ func TestFromDatasourceData(t *testing.T) {
 
 		require.NotNil(t, result)
 		assert.IsType(t, &AzureWorkloadIdentityCredentials{}, result)
+		credential := (result).(*AzureWorkloadIdentityCredentials)
+
+		assert.Equal(t, credential.TenantId, "TENANT-ID")
+		assert.Equal(t, credential.ClientId, "CLIENT-ID")
 	})
 
 	t.Run("should return client secret credentials when client secret auth configured", func(t *testing.T) {

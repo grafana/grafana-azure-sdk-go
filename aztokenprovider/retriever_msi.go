@@ -3,12 +3,13 @@ package aztokenprovider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
-	"github.com/grafana/grafana-azure-sdk-go/azsettings"
+	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
+	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
 )
 
 type managedIdentityTokenRetriever struct {
@@ -57,4 +58,9 @@ func (c *managedIdentityTokenRetriever) GetAccessToken(ctx context.Context, scop
 	}
 
 	return &AccessToken{Token: accessToken.Token, ExpiresOn: accessToken.ExpiresOn}, nil
+}
+
+// Empty implementation
+func (c *managedIdentityTokenRetriever) GetExpiry() *time.Time {
+	return nil
 }

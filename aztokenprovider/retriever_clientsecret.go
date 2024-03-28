@@ -4,13 +4,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/grafana/grafana-azure-sdk-go/azcredentials"
-	"github.com/grafana/grafana-azure-sdk-go/azsettings"
+	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
+	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
 )
 
 type clientSecretTokenRetriever struct {
@@ -69,6 +70,11 @@ func (c *clientSecretTokenRetriever) GetAccessToken(ctx context.Context, scopes 
 	}
 
 	return &AccessToken{Token: accessToken.Token, ExpiresOn: accessToken.ExpiresOn}, nil
+}
+
+// Empty implementation
+func (c *clientSecretTokenRetriever) GetExpiry() *time.Time {
+	return nil
 }
 
 func hashSecret(secret string) string {
