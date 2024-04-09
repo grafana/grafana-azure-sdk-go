@@ -1,6 +1,8 @@
 package azsettings
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type AzureCloudInfo struct {
 	Name        string
@@ -65,13 +67,15 @@ func (*AzureSettings) GetCloud(cloudName string) (*AzureCloudSettings, error) {
 	return nil, fmt.Errorf("the Azure cloud '%s' is not supported", cloudName)
 }
 
+// Returns all clouds configured on the instance, including custom clouds if any
 func (*AzureSettings) Clouds() []AzureCloudInfo {
 	clouds := getClouds()
 	return mapCloudInfo(clouds)
 }
 
-func (*AzureSettings) ConfiguredClouds() []AzureCloudInfo {
-	clouds := getConfiguredClouds()
+// Returns only the custom clouds configured on the instance
+func (*AzureSettings) CustomClouds() []AzureCloudInfo {
+	clouds := getCustomClouds()
 	return mapCloudInfo(clouds)
 }
 
@@ -87,14 +91,15 @@ func mapCloudInfo(clouds []*AzureCloudSettings) []AzureCloudInfo {
 }
 
 func getClouds() []*AzureCloudSettings {
-	if clouds := getConfiguredClouds(); len(clouds) > 0 {
-		return clouds
+	if clouds := getCustomClouds(); len(clouds) > 0 {
+		allClouds := append(clouds, predefinedClouds...)
+		return allClouds
 	}
 
 	return predefinedClouds
 }
 
-func getConfiguredClouds() []*AzureCloudSettings {
+func getCustomClouds() []*AzureCloudSettings {
 	// Configuration of Azure clouds not yet supported
 	return nil
 }
