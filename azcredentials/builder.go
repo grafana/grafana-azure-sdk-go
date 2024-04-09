@@ -3,7 +3,7 @@ package azcredentials
 import (
 	"fmt"
 
-	"github.com/grafana/grafana-azure-sdk-go/util/maputil"
+	"github.com/grafana/grafana-plugin-sdk-go/data/utils/maputil"
 )
 
 func FromDatasourceData(data map[string]interface{}, secureData map[string]string) (AzureCredentials, error) {
@@ -52,6 +52,21 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 
 	case AzureAuthWorkloadIdentity:
 		credentials := &AzureWorkloadIdentityCredentials{}
+		tenantId, err := maputil.GetStringOptional(credentialsObj, "tenantId")
+		if err != nil {
+			return nil, err
+		}
+		if tenantId != "" {
+			credentials.TenantId = tenantId
+		}
+		clientId, err := maputil.GetStringOptional(credentialsObj, "clientId")
+		if err != nil {
+			return nil, err
+		}
+		if clientId != "" {
+			credentials.ClientId = clientId
+		}
+
 		return credentials, nil
 
 	case AzureAuthClientSecret:

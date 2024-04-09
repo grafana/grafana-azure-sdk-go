@@ -26,6 +26,8 @@ type AzureManagedIdentityCredentials struct {
 
 // AzureWorkloadIdentityCredentials Uses Azure AD Workload Identity
 type AzureWorkloadIdentityCredentials struct {
+	ClientId string
+	TenantId string
 }
 
 // AzureClientSecretCredentials "App Registration" AAD service identity credentials configured in the datasource.
