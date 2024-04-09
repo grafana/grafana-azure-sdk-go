@@ -55,9 +55,31 @@ var predefinedClouds = []*AzureCloudSettings{
 	},
 }
 
-func (*AzureSettings) Clouds() []AzureCloudInfo {
+func (*AzureSettings) GetCloud(cloudName string) (*AzureCloudSettings, error) {
 	clouds := getClouds()
 
+	for _, cloud := range clouds {
+		if cloud.Name == cloudName {
+			return cloud, nil
+		}
+	}
+
+	return nil, fmt.Errorf("the Azure cloud '%s' is not supported", cloudName)
+}
+
+// Returns all clouds configured on the instance, including custom clouds if any
+func (*AzureSettings) Clouds() []AzureCloudInfo {
+	clouds := getClouds()
+	return mapCloudInfo(clouds)
+}
+
+// Returns only the custom clouds configured on the instance
+func (*AzureSettings) CustomClouds() []AzureCloudInfo {
+	clouds := getCustomClouds()
+	return mapCloudInfo(clouds)
+}
+
+func mapCloudInfo(clouds []*AzureCloudSettings) []AzureCloudInfo {
 	results := make([]AzureCloudInfo, 0, len(clouds))
 	for _, cloud := range clouds {
 		results = append(results, AzureCloudInfo{
@@ -69,18 +91,16 @@ func (*AzureSettings) Clouds() []AzureCloudInfo {
 	return results
 }
 
-func (*AzureSettings) GetCloud(cloudName string) (*AzureCloudSettings, error) {
-	clouds := getClouds()
-
-	for _, cloud := range clouds {
-		if cloud.Name == cloudName {
-			return cloud, nil
-		}
+func getClouds() []*AzureCloudSettings {
+	if clouds := getCustomClouds(); len(clouds) > 0 {
+		allClouds := append(clouds, predefinedClouds...)
+		return allClouds
 	}
 
-	return nil, fmt.Errorf("the Azure cloud '%s' not supported", cloudName)
+	return predefinedClouds
 }
 
-func getClouds() []*AzureCloudSettings {
-	return predefinedClouds
+func getCustomClouds() []*AzureCloudSettings {
+	// Configuration of Azure clouds not yet supported
+	return nil
 }

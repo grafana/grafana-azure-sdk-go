@@ -18,6 +18,15 @@ func TestGetClouds(t *testing.T) {
 	assert.Equal(t, clouds[2].Name, "AzureUSGovernment")
 }
 
+func TestGetCustomClouds(t *testing.T) {
+	settings := &AzureSettings{}
+
+	clouds := settings.CustomClouds()
+
+	// Configuration of Azure clouds not yet supported
+	assert.Len(t, clouds, 0)
+}
+
 func TestGetCloud(t *testing.T) {
 	settings := &AzureSettings{}
 
