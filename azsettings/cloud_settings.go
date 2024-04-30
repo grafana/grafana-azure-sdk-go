@@ -5,8 +5,8 @@ import (
 )
 
 type AzureCloudInfo struct {
-	Name        string
-	DisplayName string
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
 }
 
 type AzureCloudSettings struct {
