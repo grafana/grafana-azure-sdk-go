@@ -79,6 +79,9 @@ func (c *clientSecretTokenRetriever) GetExpiry() *time.Time {
 
 func hashSecret(secret string) string {
 	hash := sha256.New()
-	_, _ = hash.Write([]byte(secret))
+	_, err := hash.Write([]byte(secret))
+	if err != nil {
+		return ""
+	}
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }

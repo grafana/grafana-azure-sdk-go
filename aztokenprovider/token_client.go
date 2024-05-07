@@ -186,10 +186,16 @@ func requestUrlForm(ctx context.Context, httpClient *http.Client, requestUrl str
 		}
 
 		var errorMessage strings.Builder
-		_, _ = fmt.Fprintf(&errorMessage, "request failed with status %s", resp.Status)
+		_, err = fmt.Fprintf(&errorMessage, "request failed with status %s", resp.Status)
+		if err != nil {
+			return err
+		}
 
 		if bodyString != "" {
-			_, _ = fmt.Fprintf(&errorMessage, ", body %s", bodyString)
+			_, err = fmt.Fprintf(&errorMessage, ", body %s", bodyString)
+			if err != nil {
+				return err
+			}
 		}
 
 		return errors.New(errorMessage.String())

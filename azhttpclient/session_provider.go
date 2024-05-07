@@ -52,19 +52,23 @@ func perProcessSeed() ([]byte, error) {
 
 func (p *userSessionProvider) GetSessionId(ctx context.Context) (string, error) {
 	if ctx == nil {
-		err := fmt.Errorf("parameter 'ctx' cannot be nil")
-		return "", err
+		return "", fmt.Errorf("parameter 'ctx' cannot be nil")
 	}
 
 	currentUser, ok := azusercontext.GetCurrentUser(ctx)
-	if !ok {
-		err := fmt.Errorf("user context not configured")
-		return "", err
+	if !ok || currentUser.User == nil {
+		return "", fmt.Errorf("user context not configured")
 	}
 
 	hash := sha256.New()
-	_, _ = hash.Write(p.seed)
-	_, _ = hash.Write([]byte(currentUser.User.Login))
+	_, err := hash.Write(p.seed)
+	if err != nil {
+		return "", err
+	}
+	_, err = hash.Write([]byte(currentUser.User.Login))
+	if err != nil {
+		return "", err
+	}
 	sessionId := base64.URLEncoding.EncodeToString(hash.Sum(nil))
 
 	return sessionId, nil
