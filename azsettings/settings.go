@@ -22,6 +22,8 @@ type AzureSettings struct {
 
 	// This field determines which plugins will receive the settings via plugin context
 	ForwardSettingsPlugins []string
+
+	customClouds []*AzureCloudSettings
 }
 
 type WorkloadIdentitySettings struct {
@@ -58,6 +60,11 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 
 	if v := cfg.Get(AzureAuthEnabled); v == strconv.FormatBool(true) {
 		settings.AzureAuthEnabled = true
+	}
+
+	if customCloudsJSON := cfg.Get(AzureCustomCloudsConfig); customCloudsJSON != "" {
+		// this method will parse the JSON and set the custom cloud list in one go
+		_ = settings.SetCustomClouds(customCloudsJSON)
 	}
 
 	hasSettings := false
