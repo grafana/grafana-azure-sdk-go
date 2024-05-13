@@ -23,7 +23,7 @@ type AzureSettings struct {
 	// This field determines which plugins will receive the settings via plugin context
 	ForwardSettingsPlugins []string
 
-	customClouds []*AzureCloudSettings
+	CustomCloudList []*AzureCloudSettings
 }
 
 type WorkloadIdentitySettings struct {

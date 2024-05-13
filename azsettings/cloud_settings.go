@@ -76,8 +76,7 @@ func (settings *AzureSettings) Clouds() []AzureCloudInfo {
 
 // Returns only the custom clouds configured on the instance
 func (settings *AzureSettings) CustomClouds() []AzureCloudInfo {
-	clouds := settings.getCustomClouds()
-	return mapCloudInfo(clouds)
+	return mapCloudInfo(settings.CustomCloudList)
 }
 
 // Parses the JSON list of custom clouds passed in, then stores the list on the instance
@@ -87,7 +86,7 @@ func (settings *AzureSettings) SetCustomClouds(customCloudsJSON string) error {
 		return err
 	}
 
-	settings.customClouds = customClouds
+	settings.CustomCloudList = customClouds
 	return nil
 }
 
@@ -104,14 +103,11 @@ func mapCloudInfo(clouds []*AzureCloudSettings) []AzureCloudInfo {
 }
 
 func (settings *AzureSettings) getClouds() []*AzureCloudSettings {
-	if clouds := settings.getCustomClouds(); len(clouds) > 0 {
+	clouds := settings.CustomCloudList
+	if len(settings.CustomCloudList) > 0 {
 		allClouds := append(predefinedClouds, clouds...)
 		return allClouds
 	}
 
 	return predefinedClouds
-}
-
-func (settings *AzureSettings) getCustomClouds() []*AzureCloudSettings {
-	return settings.customClouds
 }

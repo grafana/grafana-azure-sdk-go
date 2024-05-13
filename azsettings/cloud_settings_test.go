@@ -47,7 +47,7 @@ func TestGetCloudsNoCustomClouds(t *testing.T) {
 
 func TestGetCloudsWithCustomClouds(t *testing.T) {
 	settings := &AzureSettings{}
-	settings.customClouds = testCustomClouds
+	settings.CustomCloudList = testCustomClouds
 
 	// should merge predefined and custom clouds into one list
 	clouds := settings.Clouds()
@@ -62,12 +62,23 @@ func TestGetCloudsWithCustomClouds(t *testing.T) {
 
 func TestGetCustomClouds(t *testing.T) {
 	settings := &AzureSettings{}
-	settings.customClouds = testCustomClouds
+	settings.CustomCloudList = testCustomClouds
 
 	// should return ONLY the custom clouds
 	clouds := settings.CustomClouds()
 
 	assert.Len(t, clouds, len(testCustomClouds))
+}
+
+func TestGetCustomCloudsWithNilList(t *testing.T) {
+	settings := &AzureSettings{}
+	settings.CustomCloudList = nil
+
+	// should return ONLY the custom clouds
+	clouds := settings.CustomClouds()
+
+	assert.NotNil(t, clouds)
+	assert.Len(t, clouds, 0)
 }
 
 func TestGetCloud(t *testing.T) {
@@ -108,7 +119,7 @@ func TestSetCustomClouds(t *testing.T) {
 	err := settings.SetCustomClouds(json)
 	assert.Nil(t, err)
 
-	clouds := settings.getCustomClouds()
+	clouds := settings.CustomCloudList
 
 	assert.Len(t, clouds, 1)
 	cloud := clouds[0]
@@ -119,5 +130,5 @@ func TestSetCustomClouds(t *testing.T) {
 
 	cloud2, err := settings.GetCloud("CustomCloud1")
 	assert.Nil(t, err)
-	assert.Equal(t, cloud2.Name, "CustomCloud1")	
+	assert.Equal(t, cloud2.Name, "CustomCloud1")
 }
