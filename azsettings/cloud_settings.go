@@ -87,6 +87,9 @@ func (settings *AzureSettings) SetCustomClouds(customCloudsJSON string) error {
 	}
 
 	settings.CustomCloudList = customClouds
+
+	// store it so we don't have to re-serialize back to JSON when adding to the plugin context
+	settings.CustomCloudListJSON = customCloudsJSON
 	return nil
 }
 
