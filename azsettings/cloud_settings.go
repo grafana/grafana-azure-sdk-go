@@ -81,15 +81,18 @@ func (settings *AzureSettings) CustomClouds() []AzureCloudInfo {
 
 // Parses the JSON list of custom clouds passed in, then stores the list on the instance
 func (settings *AzureSettings) SetCustomClouds(customCloudsJSON string) error {
-	var customClouds []*AzureCloudSettings
-	if err := json.Unmarshal([]byte(customCloudsJSON), &customClouds); err != nil {
-		return err
+	//only Unmarshal if the JSON has changed
+	if settings.CustomCloudListJSON != customCloudsJSON {
+		var customClouds []*AzureCloudSettings
+		if err := json.Unmarshal([]byte(customCloudsJSON), &customClouds); err != nil {
+			return err
+		}
+
+		settings.CustomCloudList = customClouds
+
+		// store it so we don't have to re-serialize back to JSON when adding to the plugin context
+		settings.CustomCloudListJSON = customCloudsJSON
 	}
-
-	settings.CustomCloudList = customClouds
-
-	// store it so we don't have to re-serialize back to JSON when adding to the plugin context
-	settings.CustomCloudListJSON = customCloudsJSON
 	return nil
 }
 
