@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	AzureCloud = "GFAZPL_AZURE_CLOUD"
+	AzureCloud              = "GFAZPL_AZURE_CLOUD"
+	AzureCustomCloudsConfig = "GFAZPL_AZURE_CLOUDS_CONFIG"
 
 	AzureAuthEnabled = "GFAZPL_AZURE_AUTH_ENABLED"
 
@@ -43,6 +44,13 @@ func ReadFromEnv() (*AzureSettings, error) {
 		return nil, err
 	} else if azureAuthEnabled {
 		azureSettings.AzureAuthEnabled = true
+	}
+
+	if customCloudsJSON := envutil.GetOrDefault(AzureCustomCloudsConfig, ""); customCloudsJSON != "" {
+		// this method will parse the JSON and set the custom cloud list in one go
+		if err := azureSettings.SetCustomClouds(customCloudsJSON); err != nil {
+			return nil, err
+		}
 	}
 
 	// Managed Identity authentication
