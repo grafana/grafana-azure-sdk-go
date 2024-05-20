@@ -81,18 +81,8 @@ func ReadFromEnv() (*AzureSettings, error) {
 		err = fmt.Errorf("invalid Azure configuration: %w", err)
 		return nil, err
 	} else if userIdentityEnabled {
-		tokenUrl, err := envutil.Get(UserIdentityTokenURL)
-		if err != nil {
-			err = fmt.Errorf("token URL must be set when user identity authentication enabled: %w", err)
-			return nil, err
-		}
-
-		clientId, err := envutil.Get(UserIdentityClientID)
-		if err != nil {
-			err = fmt.Errorf("client ID must be set when user identity authentication enabled: %w", err)
-			return nil, err
-		}
-
+		tokenUrl, err := envutil.GetOrDefault(UserIdentityTokenURL, "")
+		clientId, err := envutil.GetOrDefault(UserIdentityClientID, "")
 		clientSecret := envutil.GetOrDefault(UserIdentityClientSecret, "")
 
 		assertion := envutil.GetOrDefault(UserIdentityAssertion, "")
