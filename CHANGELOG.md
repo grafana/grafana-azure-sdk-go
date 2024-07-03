@@ -1,5 +1,9 @@
 # Change Log
 
+## v2.1.0
+
+- Add Azure Client Password as a credentials type
+
 ## v2.0.0
 
 - **Breaking change:** `mapUtil` is removed [#106](https://github.com/grafana/grafana-azure-sdk-go/pull/106). `mapUtil` functions moved to 

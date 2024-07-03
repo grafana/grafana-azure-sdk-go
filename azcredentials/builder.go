@@ -124,7 +124,31 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 			},
 		}
 		return credentials, nil
+	case AzureAuthClientPasswordCredentials:
+		userId, err := maputil.GetString(credentialsObj, "userId")
+		if err != nil {
+			return nil, err
+		}
+		clientId, err := maputil.GetString(credentialsObj, "clientId")
+		if err != nil {
+			return nil, err
+		}
+		tenantId, err := maputil.GetString(credentialsObj, "tenantId")
+		if err != nil {
+			return nil, err
+		}
+		password, ok := secureData["password"]
+		if !ok {
+			return nil, fmt.Errorf("no password provided")
+		}
 
+		credentials := &AzureClientPasswordCredentials{
+			Password: password,
+			UserId:   userId,
+			ClientId: clientId,
+			TenantId: tenantId,
+		}
+		return credentials, nil
 	default:
 		err := fmt.Errorf("the authentication type '%s' not supported", authType)
 		return nil, err

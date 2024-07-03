@@ -106,6 +106,12 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			usernameAssertion: tokenEndpoint.UsernameAssertion,
 			tokenRetriever:    tokenRetriever,
 		}, nil
+	case *azcredentials.AzureClientPasswordCredentials:
+		tokenRetriever := getPasswordTokenRetriever(settings, c)
+		return &serviceTokenProvider{
+			tokenCache:     azureTokenCache,
+			tokenRetriever: tokenRetriever,
+		}, nil
 	default:
 		err = fmt.Errorf("credentials of type '%s' not supported by Azure authentication provider", c.AzureAuthType())
 		return nil, err

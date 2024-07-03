@@ -21,6 +21,8 @@ func GetAzureCloud(settings *azsettings.AzureSettings, credentials AzureCredenti
 		return c.AzureCloud, nil
 	case *AzureClientSecretOboCredentials:
 		return c.ClientSecretCredentials.AzureCloud, nil
+	case *AzureClientPasswordCredentials:
+		return settings.GetDefaultCloud(), nil
 	default:
 		err := fmt.Errorf("the Azure credentials of type '%s' not supported", c.AzureAuthType())
 		return "", err

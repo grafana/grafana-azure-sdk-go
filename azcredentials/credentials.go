@@ -1,11 +1,12 @@
 package azcredentials
 
 const (
-	AzureAuthCurrentUserIdentity = "currentuser"
-	AzureAuthManagedIdentity     = "msi"
-	AzureAuthWorkloadIdentity    = "workloadidentity"
-	AzureAuthClientSecret        = "clientsecret"
-	AzureAuthClientSecretObo     = "clientsecret-obo"
+	AzureAuthCurrentUserIdentity       = "currentuser"
+	AzureAuthManagedIdentity           = "msi"
+	AzureAuthWorkloadIdentity          = "workloadidentity"
+	AzureAuthClientSecret              = "clientsecret"
+	AzureAuthClientSecretObo           = "clientsecret-obo"
+	AzureAuthClientPasswordCredentials = "ad-password"
 )
 
 type AzureCredentials interface {
@@ -39,6 +40,13 @@ type AzureClientSecretCredentials struct {
 	ClientSecret string
 }
 
+type AzureClientPasswordCredentials struct {
+	Password string
+	UserId   string
+	ClientId string
+	TenantId string
+}
+
 // AzureClientSecretOboCredentials "App Registration (On-Behalf-Of)" user identity credentials obtained using
 // service identity configured in the datasource.
 type AzureClientSecretOboCredentials struct {
@@ -63,4 +71,8 @@ func (credentials *AzureClientSecretCredentials) AzureAuthType() string {
 
 func (credentials *AzureClientSecretOboCredentials) AzureAuthType() string {
 	return AzureAuthClientSecretObo
+}
+
+func (credentials *AzureClientPasswordCredentials) AzureAuthType() string {
+	return AzureAuthClientPasswordCredentials
 }
