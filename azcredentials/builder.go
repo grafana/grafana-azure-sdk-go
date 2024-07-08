@@ -133,10 +133,6 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		if err != nil {
 			return nil, err
 		}
-		tenantId, err := maputil.GetString(credentialsObj, "tenantId")
-		if err != nil {
-			return nil, err
-		}
 		password, ok := secureData["password"]
 		if !ok {
 			return nil, fmt.Errorf("no password provided")
@@ -146,7 +142,6 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 			Password: password,
 			UserId:   userId,
 			ClientId: clientId,
-			TenantId: tenantId,
 		}
 		return credentials, nil
 	default:

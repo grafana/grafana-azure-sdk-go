@@ -107,11 +107,8 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			tokenRetriever:    tokenRetriever,
 		}, nil
 	case *azcredentials.AzureClientPasswordCredentials:
-		tokenRetriever := getPasswordTokenRetriever(settings, c)
-		return &serviceTokenProvider{
-			tokenCache:     azureTokenCache,
-			tokenRetriever: tokenRetriever,
-		}, nil
+		err = errors.New("azure client password credentials are not supported by azure authentication provider")
+		return nil, err
 	default:
 		err = fmt.Errorf("credentials of type '%s' not supported by Azure authentication provider", c.AzureAuthType())
 		return nil, err

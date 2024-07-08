@@ -2,7 +2,7 @@
 
 ## v2.1.0
 
-- Add Azure Client Password as a credentials type
+- Add Azure Client Password as a credentials type, but there is not a supported azure token provider. You will need to implement the token in your application.
 
 ## v2.0.0
 
