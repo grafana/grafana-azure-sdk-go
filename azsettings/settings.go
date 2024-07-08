@@ -25,6 +25,8 @@ type AzureSettings struct {
 
 	CustomCloudList     []*AzureCloudSettings
 	CustomCloudListJSON string
+
+	ClientPasswordCredentialsEnabled bool
 }
 
 type WorkloadIdentitySettings struct {
@@ -124,6 +126,11 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		if v := cfg.Get(WorkloadIdentityTokenFile); v != "" {
 			settings.WorkloadIdentitySettings.TokenFile = v
 		}
+	}
+
+	if v := cfg.Get(ClientPasswordCredentialsEnabled); v == strconv.FormatBool(true) {
+		settings.ClientPasswordCredentialsEnabled = true
+		hasSettings = true
 	}
 
 	return settings, hasSettings
