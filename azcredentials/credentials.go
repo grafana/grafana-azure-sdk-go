@@ -1,12 +1,12 @@
 package azcredentials
 
 const (
-	AzureAuthCurrentUserIdentity       = "currentuser"
-	AzureAuthManagedIdentity           = "msi"
-	AzureAuthWorkloadIdentity          = "workloadidentity"
-	AzureAuthClientSecret              = "clientsecret"
-	AzureAuthClientSecretObo           = "clientsecret-obo"
-	AzureAuthClientPasswordCredentials = "ad-password"
+	AzureAuthCurrentUserIdentity      = "currentuser"
+	AzureAuthManagedIdentity          = "msi"
+	AzureAuthWorkloadIdentity         = "workloadidentity"
+	AzureAuthClientSecret             = "clientsecret"
+	AzureAuthClientSecretObo          = "clientsecret-obo"
+	AzureAuthEntraPasswordCredentials = "ad-password"
 )
 
 type AzureCredentials interface {
@@ -40,7 +40,7 @@ type AzureClientSecretCredentials struct {
 	ClientSecret string
 }
 
-type AzureClientPasswordCredentials struct {
+type AzureEntraPasswordCredentials struct {
 	Password string
 	UserId   string
 	ClientId string
@@ -73,6 +73,6 @@ func (credentials *AzureClientSecretOboCredentials) AzureAuthType() string {
 	return AzureAuthClientSecretObo
 }
 
-func (credentials *AzureClientPasswordCredentials) AzureAuthType() string {
-	return AzureAuthClientPasswordCredentials
+func (credentials *AzureEntraPasswordCredentials) AzureAuthType() string {
+	return AzureAuthEntraPasswordCredentials
 }

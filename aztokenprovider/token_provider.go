@@ -106,7 +106,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			usernameAssertion: tokenEndpoint.UsernameAssertion,
 			tokenRetriever:    tokenRetriever,
 		}, nil
-	case *azcredentials.AzureClientPasswordCredentials:
+	case *azcredentials.AzureEntraPasswordCredentials:
 		err = errors.New("azure client password credentials are not supported by azure authentication provider")
 		return nil, err
 	default:

@@ -27,7 +27,7 @@ const (
 	UserIdentityAssertion                  = "GFAZPL_USER_IDENTITY_ASSERTION"
 	UserIdentityFallbackCredentialsEnabled = "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED"
 
-	ClientPasswordCredentialsEnabled = "GFAZPL_CLIENT_PASSWORD_CREDENTIALS_ENABLED"
+	AzureEntraPasswordCredentialsEnabled = "GFAZPL_AZURE_ENTRA_PASSWORD_CREDENTIALS_ENABLED"
 
 	// Pre Grafana 9.x variables
 	fallbackAzureCloud              = "AZURE_CLOUD"
@@ -116,11 +116,11 @@ func ReadFromEnv() (*AzureSettings, error) {
 	}
 
 	// Client Password Credentials auth
-	if clientPasswordCredentialsEnabled, err := envutil.GetBoolOrDefault(ClientPasswordCredentialsEnabled, false); err != nil {
+	if AzureEntraPasswordCredentialsEnabled, err := envutil.GetBoolOrDefault(AzureEntraPasswordCredentialsEnabled, false); err != nil {
 		err = fmt.Errorf("invalid Azure configuration: %w", err)
 		return nil, err
 	} else {
-		azureSettings.ClientPasswordCredentialsEnabled = clientPasswordCredentialsEnabled
+		azureSettings.AzureEntraPasswordCredentialsEnabled = AzureEntraPasswordCredentialsEnabled
 	}
 
 	return azureSettings, nil

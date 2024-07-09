@@ -124,7 +124,7 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 			},
 		}
 		return credentials, nil
-	case AzureAuthClientPasswordCredentials:
+	case AzureAuthEntraPasswordCredentials:
 		userId, err := maputil.GetString(credentialsObj, "userId")
 		if err != nil {
 			return nil, err
@@ -138,7 +138,7 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 			return nil, fmt.Errorf("no password provided")
 		}
 
-		credentials := &AzureClientPasswordCredentials{
+		credentials := &AzureEntraPasswordCredentials{
 			Password: password,
 			UserId:   userId,
 			ClientId: clientId,
