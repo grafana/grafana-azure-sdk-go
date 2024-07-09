@@ -2,7 +2,7 @@
 
 ## v2.1.0
 
-- Add Azure Client Password as a credentials type, but there is not a supported azure token provider. You will need to implement the token in your application.
+- Add Azure Entra Password as a credentials type. This is not a recommended authentication method and is currently only supported for MSSQL. If you require this method the token provider will need to be implemented separately.
 
 ## v2.0.0
 
