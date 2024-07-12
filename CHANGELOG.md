@@ -1,5 +1,9 @@
 # Change Log
 
+## v2.1.1
+
+- Add Azure Entra Password flag to env settings.
+
 ## v2.1.0
 
 - Add Azure Entra Password as a credentials type. This is not a recommended authentication method and is currently only supported for MSSQL. If you require this method the token provider will need to be implemented separately.
