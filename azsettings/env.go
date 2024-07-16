@@ -181,10 +181,6 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 				}
 			}
 		}
-
-		if azureSettings.AzureEntraPasswordCredentialsEnabled {
-			envs = append(envs, fmt.Sprintf("%s=true", AzureEntraPasswordCredentialsEnabled))
-		}
 	}
 
 	return envs
