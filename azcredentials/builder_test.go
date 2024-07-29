@@ -149,6 +149,7 @@ func TestFromDatasourceData(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
 				"authType": "msi",
+				"clientId": "CLIENT-ID"
 			},
 		}
 		var secureData = map[string]string{}
@@ -161,7 +162,7 @@ func TestFromDatasourceData(t *testing.T) {
 		credential := (result).(*AzureManagedIdentityCredentials)
 
 		// ClientId currently not parsed
-		assert.Equal(t, credential.ClientId, "")
+		assert.Equal(t, credential.ClientId, "CLIENT-ID")
 	})
 
 	t.Run("should return workload identity credentials when workload identity auth configured", func(t *testing.T) {
