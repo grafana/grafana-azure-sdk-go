@@ -1,5 +1,10 @@
 # Change Log
 
+## v2.1.2
+
+- Dependency updates
+- Fix bug where `AzureAuthEnabled` setting was not correctly picked up from context
+
 ## v2.1.1
 
 - Dependency updates
