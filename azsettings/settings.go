@@ -61,8 +61,10 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		return settings, false
 	}
 
+	hasSettings := false
 	if v := cfg.Get(AzureAuthEnabled); v == strconv.FormatBool(true) {
 		settings.AzureAuthEnabled = true
+		hasSettings = true
 	}
 
 	if customCloudsJSON := cfg.Get(AzureCustomCloudsConfig); customCloudsJSON != "" {
@@ -70,9 +72,11 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		if err := settings.SetCustomClouds(customCloudsJSON); err != nil {
 			backend.Logger.Error("Error setting custom clouds:  %w", err)
 		}
+		if settings.CustomCloudListJSON != "" {
+			hasSettings = true
+		}
 	}
 
-	hasSettings := false
 	if v := cfg.Get(AzureCloud); v != "" {
 		settings.Cloud = v
 		hasSettings = true
