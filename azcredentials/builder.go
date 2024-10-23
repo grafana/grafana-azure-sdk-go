@@ -48,6 +48,15 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 
 	case AzureAuthManagedIdentity:
 		credentials := &AzureManagedIdentityCredentials{}
+		
+		clientId, err := maputil.GetStringOptional(credentialsObj, "clientId")
+		if err != nil {
+			return nil, err
+		}
+		if clientId != "" {
+			credentials.ClientId = clientId
+		}
+
 		return credentials, nil
 
 	case AzureAuthWorkloadIdentity:
