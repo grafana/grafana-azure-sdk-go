@@ -3,7 +3,8 @@ package azsettings
 import (
 	"fmt"
 
-	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings/internal/envutil"
+	//"github.com/grafana/grafana-azure-sdk-go/v2/azsettings/internal/envutil"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azsettings/internal/envutil"
 )
 
 const (
