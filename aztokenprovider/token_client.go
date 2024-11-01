@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
@@ -102,14 +100,7 @@ func (c *tokenClientImpl) FromUsername(ctx context.Context, username string, sco
 
 func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Values, scopes []string) (*AccessToken, error) {
 	queryParams.Set("client_id", c.clientId)
-
-	clientAssertion, caerr := GetClientAssertionJWT(c.clientSecret)
-	if caerr != nil {
-		queryParams.Set("client_secret", c.clientSecret)
-	} else {
-		queryParams.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
-		queryParams.Set("client_assertion", clientAssertion)
-	}
+	queryParams.Set("client_secret", c.clientSecret)
 
 	addScopeQueryParam(queryParams, scopes)
 
@@ -125,36 +116,6 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 	}
 
 	return accessToken, nil
-}
-
-// Get Managed Identity Credential for use as a client assertion JWT
-func GetClientAssertionJWT(msiClientID string) (string, error) {
-	// exchange auth code to a valid token
-	managedIdentityClientID := msiClientID
-	azScopes := []string{"api://AzureADTokenExchange/.default"}
-
-	mic, err := azidentity.NewManagedIdentityCredential(
-		&azidentity.ManagedIdentityCredentialOptions{
-			ID: azidentity.ClientID(managedIdentityClientID),
-		},
-	)
-	if err != nil {
-		// return nil, errOAuthTokenExchange.Errorf("error constructing managed identity credential: %w", err)
-		return "", err
-	}
-
-	getAssertion := func(ctx context.Context) (string, error) {
-		tk, err := mic.GetToken(ctx, policy.TokenRequestOptions{Scopes: azScopes})
-		return tk.Token, err
-	}
-
-	micToken, err := getAssertion(context.Background())
-	if err != nil {
-		// return nil, errOAuthTokenExchange.Errorf("error getting managed identity token: %w", err)
-		return "", err
-	}
-
-	return micToken, nil
 }
 
 func addScopeQueryParam(queryParams url.Values, scopes []string) {
@@ -194,7 +155,7 @@ func requestUrlForm(ctx context.Context, httpClient *http.Client, requestUrl str
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 	req.Header.Set("Accept", "application/json")
 
-	req.Header.Set("X-Client-SKU", "github.com/grafana/grafana-azure-sdk-go/v2")
+	req.Header.Set("X-Client-SKU", "github.com/naizerjohn-ms/grafana-azure-sdk-go")
 	req.Header.Set("X-Client-Ver", "2.0")
 
 	resp, err := httpClient.Do(req)

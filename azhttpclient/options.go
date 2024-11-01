@@ -1,12 +1,12 @@
 package azhttpclient
 
 import (
-	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
-	//"github.com/grafana/grafana-azure-sdk-go/v2/azhttpclient/internal/azendpoint"
-	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azhttpclient/internal/azendpoint"
-	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
-	"github.com/grafana/grafana-azure-sdk-go/v2/aztokenprovider"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azcredentials"
+	//"github.com/naizerjohn-ms/grafana-azure-sdk-go/azhttpclient/internal/azendpoint"
 	sdkhttpclient "github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azhttpclient/internal/azendpoint"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azsettings"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/aztokenprovider"
 )
 
 type AzureTokenProviderFactory = func(*azsettings.AzureSettings, azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error)

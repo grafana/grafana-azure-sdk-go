@@ -10,8 +10,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
-	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azcredentials"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azsettings"
 )
 
 type clientSecretTokenRetriever struct {

@@ -6,6 +6,7 @@ const (
 	AzureAuthWorkloadIdentity         = "workloadidentity"
 	AzureAuthClientSecret             = "clientsecret"
 	AzureAuthClientSecretObo          = "clientsecret-obo"
+	AzureAuthManagedIdentityObo	   	  = "msi-obo"
 	AzureAuthEntraPasswordCredentials = "ad-password"
 )
 
@@ -53,6 +54,10 @@ type AzureClientSecretOboCredentials struct {
 	ClientSecretCredentials AzureClientSecretCredentials
 }
 
+type AzureManagedIdentityOboCredentials struct {
+	ManagedIdentityCredentials AzureManagedIdentityCredentials
+}
+
 func (credentials *AadCurrentUserCredentials) AzureAuthType() string {
 	return AzureAuthCurrentUserIdentity
 }
@@ -71,6 +76,10 @@ func (credentials *AzureClientSecretCredentials) AzureAuthType() string {
 
 func (credentials *AzureClientSecretOboCredentials) AzureAuthType() string {
 	return AzureAuthClientSecretObo
+}
+
+func (credentials *AzureManagedIdentityOboCredentials) AzureAuthType() string {
+	return AzureAuthManagedIdentityObo
 }
 
 func (credentials *AzureEntraPasswordCredentials) AzureAuthType() string {

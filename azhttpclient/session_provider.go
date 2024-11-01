@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/grafana/grafana-azure-sdk-go/v2/azusercontext"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azusercontext"
 )
 
 var (

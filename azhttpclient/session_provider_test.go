@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/grafana/grafana-azure-sdk-go/v2/azusercontext"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azusercontext"
 	"github.com/stretchr/testify/require"
 )
 
