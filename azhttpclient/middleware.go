@@ -6,9 +6,7 @@ import (
 	"net/http"
 
 	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azcredentials"
-	//"github.com/naizerjohn-ms/grafana-azure-sdk-go/azhttpclient/internal/azendpoint"
 	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azhttpclient/internal/azendpoint"
-	//"github.com/naizerjohn-ms/grafana-azure-sdk-go/aztokenprovider"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
 	"github.com/naizerjohn-ms/grafana-azure-sdk-go/aztokenprovider"
 )

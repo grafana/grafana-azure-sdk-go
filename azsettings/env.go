@@ -3,7 +3,6 @@ package azsettings
 import (
 	"fmt"
 
-	//"github.com/naizerjohn-ms/grafana-azure-sdk-go/azsettings/internal/envutil"
 	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azsettings/internal/envutil"
 )
 
