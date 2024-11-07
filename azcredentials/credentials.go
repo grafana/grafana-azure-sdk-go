@@ -54,8 +54,14 @@ type AzureClientSecretOboCredentials struct {
 	ClientSecretCredentials AzureClientSecretCredentials
 }
 
+// AzureManagedIdentityOboCredentials "Managed Identity (On-Behalf-Of)" user identity credentials obtained using 
+// service identity configured in the datasource.
 type AzureManagedIdentityOboCredentials struct {
-	ManagedIdentityCredentials AzureManagedIdentityCredentials
+	AzureCloud  			string
+	Authority   			string
+	TenantId    			string
+	ClientId    			string
+	ManagedIdentityClientId	string
 }
 
 func (credentials *AadCurrentUserCredentials) AzureAuthType() string {
