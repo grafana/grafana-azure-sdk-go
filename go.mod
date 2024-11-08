@@ -1,7 +1,7 @@
 module github.com/grafana/grafana-azure-sdk-go/v2
 
 go 1.21
-toolchain go1.22.5
+toolchain go1.22.9
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0
@@ -9,7 +9,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/grafana/grafana-plugin-sdk-go v0.259.0
 	github.com/stretchr/testify v1.9.0
-	google.golang.org/grpc v1.67.1
+	google.golang.org/grpc v1.68.0
 )
 
 require (
