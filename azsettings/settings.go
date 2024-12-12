@@ -2,6 +2,7 @@ package azsettings
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -148,6 +149,10 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		settings.AzureEntraPasswordCredentialsEnabled = true
 		hasSettings = true
 	}
+
+	// debug: print out all the tokenendpoint settings
+	fmt.Println("FromContext settings:")
+	fmt.Println(settings.UserIdentityTokenEndpoint.ClientAuthentication, settings.UserIdentityTokenEndpoint.ClientId, settings.UserIdentityTokenEndpoint.ClientSecret, settings.UserIdentityTokenEndpoint.ManagedIdentityClientId, settings.UserIdentityTokenEndpoint.FederatedCredentialAudience, settings.UserIdentityTokenEndpoint.TokenUrl, settings.UserIdentityTokenEndpoint.UsernameAssertion)
 
 	return settings, hasSettings
 }

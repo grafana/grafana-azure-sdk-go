@@ -117,7 +117,9 @@ func ReadFromEnv() (*AzureSettings, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		// debug: print out all the token endpoint settings
+		fmt.Println("from env:")
+		fmt.Println(tokenUrl, clientAuthentication, clientId, clientSecret, managedIdentityClientId, federatedCredentialAudience, usernameAssertion, serviceCredentialsFallback)
 		azureSettings.UserIdentityEnabled = true
 		azureSettings.UserIdentityTokenEndpoint = &TokenEndpointSettings{
 			TokenUrl:          				tokenUrl,

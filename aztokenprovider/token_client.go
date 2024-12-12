@@ -138,7 +138,7 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 		queryParams.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 		
 	default:
-		return nil, fmt.Errorf("unsupported client authentication method '%s'", c.clientAuthentication)
+		return nil, fmt.Errorf("unsupported client authentication method '%s'", c.clientAuthentication + " " + c.clientId + " " + c.clientSecret + " " + c.ManagedIdentityClientId + " " + c.FederatedCredentialAudience)
 	}
 
 	addScopeQueryParam(queryParams, scopes)
