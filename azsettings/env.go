@@ -20,12 +20,15 @@ const (
 	WorkloadIdentityClientID  = "GFAZPL_WORKLOAD_IDENTITY_CLIENT_ID"
 	WorkloadIdentityTokenFile = "GFAZPL_WORKLOAD_IDENTITY_TOKEN_FILE"
 
-	UserIdentityEnabled                    = "GFAZPL_USER_IDENTITY_ENABLED"
-	UserIdentityTokenURL                   = "GFAZPL_USER_IDENTITY_TOKEN_URL"
-	UserIdentityClientID                   = "GFAZPL_USER_IDENTITY_CLIENT_ID"
-	UserIdentityClientSecret               = "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
-	UserIdentityAssertion                  = "GFAZPL_USER_IDENTITY_ASSERTION"
-	UserIdentityFallbackCredentialsEnabled = "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED"
+	UserIdentityEnabled                    	= "GFAZPL_USER_IDENTITY_ENABLED"
+	UserIdentityTokenURL                   	= "GFAZPL_USER_IDENTITY_TOKEN_URL"
+	UserIdentityClientAuthentication 	   	= "GFAZPL_USER_IDENTITY_CLIENT_AUTHENTICATION"
+	UserIdentityClientID                   	= "GFAZPL_USER_IDENTITY_CLIENT_ID"
+	UserIdentityClientSecret               	= "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
+	UserIdentityManagedIdentityClientID    	= "GFAZPL_USER_IDENTITY_MANAGED_IDENTITY_CLIENT_ID"
+	UserIdentityFederatedCredentialAudience	= "GFAZPL_USER_IDENTITY_FEDERATED_CREDENTIAL_AUDIENCE"
+	UserIdentityAssertion                  	= "GFAZPL_USER_IDENTITY_ASSERTION"
+	UserIdentityFallbackCredentialsEnabled 	= "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED"
 
 	AzureEntraPasswordCredentialsEnabled = "GFAZPL_AZURE_ENTRA_PASSWORD_CREDENTIALS_ENABLED"
 
@@ -89,6 +92,12 @@ func ReadFromEnv() (*AzureSettings, error) {
 			return nil, err
 		}
 
+		clientAuthentication, err := envutil.Get(UserIdentityClientAuthentication)
+		if err != nil {
+			err = fmt.Errorf("client authentication must be set when user identity authentication enabled: %w", err)
+			return nil, err
+		}
+
 		clientId, err := envutil.Get(UserIdentityClientID)
 		if err != nil {
 			err = fmt.Errorf("client ID must be set when user identity authentication enabled: %w", err)
@@ -96,6 +105,10 @@ func ReadFromEnv() (*AzureSettings, error) {
 		}
 
 		clientSecret := envutil.GetOrDefault(UserIdentityClientSecret, "")
+
+		managedIdentityClientId := envutil.GetOrDefault(UserIdentityManagedIdentityClientID, "")
+
+		federatedCredentialAudience := envutil.GetOrDefault(UserIdentityFederatedCredentialAudience, "")
 
 		assertion := envutil.GetOrDefault(UserIdentityAssertion, "")
 		usernameAssertion := assertion == "username"
@@ -107,10 +120,13 @@ func ReadFromEnv() (*AzureSettings, error) {
 
 		azureSettings.UserIdentityEnabled = true
 		azureSettings.UserIdentityTokenEndpoint = &TokenEndpointSettings{
-			TokenUrl:          tokenUrl,
-			ClientId:          clientId,
-			ClientSecret:      clientSecret,
-			UsernameAssertion: usernameAssertion,
+			TokenUrl:          				tokenUrl,
+			ClientAuthentication: 			clientAuthentication,
+			ClientId:          				clientId,
+			ClientSecret:      				clientSecret,
+			ManagedIdentityClientId:		managedIdentityClientId,
+			FederatedCredentialAudience:	federatedCredentialAudience,
+			UsernameAssertion: 				usernameAssertion,
 		}
 		azureSettings.UserIdentityFallbackCredentialsEnabled = serviceCredentialsFallback
 	}
@@ -170,11 +186,20 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 				if tokenEndpoint.TokenUrl != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityTokenURL, tokenEndpoint.TokenUrl))
 				}
+				if tokenEndpoint.ClientAuthentication != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientAuthentication, tokenEndpoint.ClientAuthentication))
+				}
 				if tokenEndpoint.ClientId != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientID, tokenEndpoint.ClientId))
 				}
 				if tokenEndpoint.ClientSecret != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientSecret, tokenEndpoint.ClientSecret))
+				}
+				if tokenEndpoint.ManagedIdentityClientId != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityManagedIdentityClientID, tokenEndpoint.ManagedIdentityClientId))
+				}
+				if tokenEndpoint.FederatedCredentialAudience != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityFederatedCredentialAudience, tokenEndpoint.FederatedCredentialAudience))
 				}
 				if tokenEndpoint.UsernameAssertion {
 					envs = append(envs, fmt.Sprintf("%s=username", UserIdentityAssertion))

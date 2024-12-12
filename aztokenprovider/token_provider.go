@@ -95,7 +95,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			}
 		}
 		tokenEndpoint := settings.UserIdentityTokenEndpoint
-		client, err := NewTokenClient(tokenEndpoint.TokenUrl, tokenEndpoint.ClientId, tokenEndpoint.ClientSecret, http.DefaultClient)
+		client, err := NewTokenClient(tokenEndpoint.TokenUrl, tokenEndpoint.ClientAuthentication, tokenEndpoint.ClientId, tokenEndpoint.ClientSecret, tokenEndpoint.ManagedIdentityClientId, tokenEndpoint.FederatedCredentialAudience, http.DefaultClient)
 		if err != nil {
 			err = fmt.Errorf("failed to initialize user authentication provider: %w", err)
 			return nil, err

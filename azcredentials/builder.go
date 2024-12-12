@@ -124,31 +124,6 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 			},
 		}
 		return credentials, nil
-	case AzureAuthManagedIdentityObo:
-		cloud, err := maputil.GetString(credentialsObj, "azureCloud")
-		if err != nil {
-			return nil, err
-		}
-		tenantId, err := maputil.GetString(credentialsObj, "tenantId")
-		if err != nil {
-			return nil, err
-		}
-		clientId, err := maputil.GetString(credentialsObj, "clientId")
-		if err != nil {
-			return nil, err
-		}
-		managedIdentityClientId, err := maputil.GetString(credentialsObj, "managedIdentityClientId")
-		if err != nil {
-			return nil, err
-		}
-
-		credentials := &AzureManagedIdentityOboCredentials{
-			AzureCloud:              cloud,
-			TenantId:                tenantId,
-			ClientId:                clientId,
-			ManagedIdentityClientId: managedIdentityClientId,
-		}
-		return credentials, nil
 	case AzureAuthEntraPasswordCredentials:
 		userId, err := maputil.GetString(credentialsObj, "userId")
 		if err != nil {

@@ -36,9 +36,12 @@ type WorkloadIdentitySettings struct {
 }
 
 type TokenEndpointSettings struct {
-	TokenUrl     string
-	ClientId     string
-	ClientSecret string
+	TokenUrl     					string
+	ClientAuthentication 			string
+	ClientId     					string
+	ClientSecret 					string
+	ManagedIdentityClientId 		string
+	FederatedCredentialAudience 	string
 
 	// UsernameAssertion allows to use a custom token request assertion when Grafana is behind auth proxy
 	UsernameAssertion bool
@@ -98,11 +101,20 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		settings.UserIdentityTokenEndpoint = &TokenEndpointSettings{}
 		settings.UserIdentityFallbackCredentialsEnabled = true
 
+		if v := cfg.Get(UserIdentityClientAuthentication); v != "" {
+			settings.UserIdentityTokenEndpoint.ClientAuthentication = v
+		}
 		if v := cfg.Get(UserIdentityClientID); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientId = v
 		}
 		if v := cfg.Get(UserIdentityClientSecret); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientSecret = v
+		}
+		if v := cfg.Get(UserIdentityManagedIdentityClientID); v != "" {
+			settings.UserIdentityTokenEndpoint.ManagedIdentityClientId = v
+		}
+		if v := cfg.Get(UserIdentityFederatedCredentialAudience); v != "" {
+			settings.UserIdentityTokenEndpoint.FederatedCredentialAudience = v
 		}
 		if v := cfg.Get(UserIdentityTokenURL); v != "" {
 			settings.UserIdentityTokenEndpoint.TokenUrl = v

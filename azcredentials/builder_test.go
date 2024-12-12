@@ -211,7 +211,7 @@ func TestFromDatasourceData(t *testing.T) {
 		assert.Equal(t, credential.ClientSecret, "FAKE-SECRET")
 	})
 
-	t.Run("should return client secret on-behalf-of credentials when on-behalf-of auth configured", func(t *testing.T) {
+	t.Run("should return on-behalf-of credentials when on-behalf-of auth configured", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
 				"authType":   "clientsecret-obo",
@@ -236,31 +236,6 @@ func TestFromDatasourceData(t *testing.T) {
 		assert.Equal(t, credential.ClientSecretCredentials.TenantId, "TENANT-ID")
 		assert.Equal(t, credential.ClientSecretCredentials.ClientId, "CLIENT-TD")
 		assert.Equal(t, credential.ClientSecretCredentials.ClientSecret, "FAKE-SECRET")
-	})
-
-	t.Run("should return managed identity on-behalf-of credentials when on-behalf-of auth configured", func(t *testing.T) {
-		var data = map[string]interface{}{
-			"azureCredentials": map[string]interface{}{
-				"authType":   "msi-obo",
-				"azureCloud": "AzureChinaCloud",
-				"tenantId":   "TENANT-ID",
-				"clientId":   "CLIENT-TD",
-				"managedIdentityClientId": "FAKE-MSI-ID",
-			},
-		}
-		var secureData = map[string]string{}
-
-		result, err := FromDatasourceData(data, secureData)
-		require.NoError(t, err)
-
-		require.NotNil(t, result)
-		assert.IsType(t, &AzureManagedIdentityOboCredentials{}, result)
-		credential := (result).(*AzureManagedIdentityOboCredentials)
-
-		assert.Equal(t, credential.AzureCloud, azsettings.AzureChina)
-		assert.Equal(t, credential.TenantId, "TENANT-ID")
-		assert.Equal(t, credential.ClientId, "CLIENT-TD")
-		assert.Equal(t, credential.ManagedIdentityClientId, "FAKE-MSI-ID")
 	})
 
 	t.Run("should return client secret when legacy client secret saved", func(t *testing.T) {
