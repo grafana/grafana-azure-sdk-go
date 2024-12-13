@@ -122,7 +122,7 @@ func ReadFromEnv() (*AzureSettings, error) {
 		azureSettings.UserIdentityTokenEndpoint = &TokenEndpointSettings{
 			TokenUrl:          				tokenUrl,
 			ClientAuthentication: 			clientAuthentication,
-			ClientId:          				clientId + "From Env",
+			ClientId:          				clientId,
 			ClientSecret:      				clientSecret,
 			ManagedIdentityClientId:		managedIdentityClientId,
 			FederatedCredentialAudience:	federatedCredentialAudience,
@@ -190,7 +190,7 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientAuthentication, tokenEndpoint.ClientAuthentication))
 				}
 				if tokenEndpoint.ClientId != "" {
-					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientID, tokenEndpoint.ClientId + "Writing to Env... by the way: " + tokenEndpoint.ClientAuthentication))
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientID, tokenEndpoint.ClientId))
 				}
 				if tokenEndpoint.ClientSecret != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientSecret, tokenEndpoint.ClientSecret))

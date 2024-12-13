@@ -105,7 +105,7 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 			settings.UserIdentityTokenEndpoint.ClientAuthentication = v
 		}
 		if v := cfg.Get(UserIdentityClientID); v != "" {
-			settings.UserIdentityTokenEndpoint.ClientId = v + "From Context"
+			settings.UserIdentityTokenEndpoint.ClientId = v
 		}
 		if v := cfg.Get(UserIdentityClientSecret); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientSecret = v
