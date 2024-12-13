@@ -190,7 +190,7 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientAuthentication, tokenEndpoint.ClientAuthentication))
 				}
 				if tokenEndpoint.ClientId != "" {
-					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientID, tokenEndpoint.ClientId))
+					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientID, tokenEndpoint.ClientId + "Writing to Env... by the way: " + tokenEndpoint.ClientAuthentication))
 				}
 				if tokenEndpoint.ClientSecret != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", UserIdentityClientSecret, tokenEndpoint.ClientSecret))
