@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	//"github.com/urfave/cli"
 )
 
 type TokenClient interface {
@@ -130,12 +131,16 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 
 	case ManagedIdentity:
 		// get client assertion and add it to the request
-		clientAssertion, err := c.ManagedIdentityCallback(ctx)
+		// clientAssertion, err := c.ManagedIdentityCallback(ctx)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("failed to get client assertion: %w", err)
+		// }
+		clientAssertion, err := GetClientAssertionJWT(c.ManagedIdentityClientId)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get client assertion: %w", err)
 		}
-		queryParams.Set("client_assertion", clientAssertion)
 		queryParams.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+		queryParams.Set("client_assertion", clientAssertion)
 		
 	default:
 		return nil, fmt.Errorf("unsupported client authentication method '%s'", c.clientAuthentication + " " + c.clientId + " " + c.clientSecret + " " + c.ManagedIdentityClientId + " " + c.FederatedCredentialAudience)
@@ -187,6 +192,32 @@ func (c *tokenClientImpl) ManagedIdentityCallback(ctx context.Context) (string, 
 	}
 
 	return tk.Token, nil
+}
+
+// Get Managed Identity Credential for use as a client assertion JWT
+func GetClientAssertionJWT(msiClientID string) (string, error) {
+	// exchange auth code to a valid token
+	managedIdentityClientID := msiClientID
+	azScopes := []string{"api://AzureADTokenExchange/.default"}
+	mic, err := azidentity.NewManagedIdentityCredential(
+		&azidentity.ManagedIdentityCredentialOptions{
+			ID: azidentity.ClientID(managedIdentityClientID),
+		},
+	)
+	if err != nil {
+		// return nil, errOAuthTokenExchange.Errorf("error constructing managed identity credential: %w", err)
+		return "", err
+	}
+	getAssertion := func(ctx context.Context) (string, error) {
+		tk, err := mic.GetToken(ctx, policy.TokenRequestOptions{Scopes: azScopes})
+		return tk.Token, err
+	}
+	micToken, err := getAssertion(context.Background())
+	if err != nil {
+		// return nil, errOAuthTokenExchange.Errorf("error getting managed identity token: %w", err)
+		return "", err
+	}
+	return micToken, nil
 }
 
 func addScopeQueryParam(queryParams url.Values, scopes []string) {
