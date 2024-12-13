@@ -26,13 +26,13 @@ type TokenClient interface {
 }
 
 type tokenClientImpl struct {
-	httpClient   					*http.Client
-	endpointUrl  					string
-	clientAuthentication 			string
-	clientId     					string
-	clientSecret 					string
-	ManagedIdentityClientId 		string
-	FederatedCredentialAudience 	string
+	httpClient                  *http.Client
+	endpointUrl                 string
+	clientAuthentication        string
+	clientId                    string
+	clientSecret                string
+	ManagedIdentityClientId     string
+	FederatedCredentialAudience string
 }
 
 type tokenResponse struct {
@@ -45,12 +45,12 @@ type tokenResponse struct {
 
 // List of supported client authentication methods for token requests
 const (
-	ClientSecret 	= "client_secret_post"
+	ClientSecret    = "client_secret_post"
 	ManagedIdentity = "managed_identity"
 )
 
 // List of supported audiences in Azure
-var supportedFederatedCredentialAudiences = []string {
+var supportedFederatedCredentialAudiences = []string{
 	"api://AzureADTokenExchange",      // Public
 	"api://AzureADTokenExchangeUSGov", // US Gov
 	"api://AzureADTokenExchangeChina", // Mooncake
@@ -60,13 +60,13 @@ var supportedFederatedCredentialAudiences = []string {
 
 func NewTokenClient(endpointUrl string, clientAuthentication string, clientId string, clientSecret string, managedIdentityClientId string, federatedCredentialAudience string, httpClient *http.Client) (TokenClient, error) {
 	return &tokenClientImpl{
-		httpClient:   					httpClient,
-		endpointUrl:  					endpointUrl,
-		clientAuthentication: 			clientAuthentication,
-		clientId:     					clientId,
-		clientSecret: 					clientSecret,
-		ManagedIdentityClientId: 		managedIdentityClientId,
-		FederatedCredentialAudience: 	federatedCredentialAudience,
+		httpClient:                  httpClient,
+		endpointUrl:                 endpointUrl,
+		clientAuthentication:        clientAuthentication,
+		clientId:                    clientId,
+		clientSecret:                clientSecret,
+		ManagedIdentityClientId:     managedIdentityClientId,
+		FederatedCredentialAudience: federatedCredentialAudience,
 	}, nil
 }
 
@@ -124,27 +124,33 @@ func (c *tokenClientImpl) FromUsername(ctx context.Context, username string, sco
 
 func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Values, scopes []string) (*AccessToken, error) {
 	queryParams.Set("client_id", c.clientId)
+	//queryParams.Set("client_secret", c.clientSecret)
+	
+	// get client assertion and add it to the request
+	clientAssertion, caerr := getClientAssertion(c.clientSecret)
+	if caerr != nil {
+		return nil, fmt.Errorf("failed to get client assertion: %w", caerr)
+	}
+	queryParams.Set("client_assertion", clientAssertion)
+	queryParams.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 
-	switch c.clientAuthentication {
-	case ClientSecret:
-		queryParams.Set("client_secret", c.clientSecret)
+	// switch c.clientAuthentication {
+	// case ClientSecret:
+	// 	queryParams.Set("client_secret", c.clientSecret)
 
 	// case ManagedIdentity:
 	// 	// get client assertion and add it to the request
-	// 	// clientAssertion, err := c.ManagedIdentityCallback(ctx)
-	// 	// if err != nil {
-	// 	// 	return nil, fmt.Errorf("failed to get client assertion: %w", err)
-	// 	// }
-	// 	clientAssertion, err := GetClientAssertionJWT(c.ManagedIdentityClientId)
+	// 	clientAssertion, err := c.ManagedIdentityCallback(ctx)
 	// 	if err != nil {
 	// 		return nil, fmt.Errorf("failed to get client assertion: %w", err)
 	// 	}
+
 	// 	queryParams.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 	// 	queryParams.Set("client_assertion", clientAssertion)
-		
-	default:
-		return nil, fmt.Errorf("unsupported client authentication method '%s'", c.clientAuthentication + " " + c.clientId + " " + c.clientSecret + " " + c.ManagedIdentityClientId + " " + c.FederatedCredentialAudience)
-	}
+
+	// default:
+	// 	return nil, fmt.Errorf("unsupported client authentication method '%s'", c.clientAuthentication)
+	// }
 
 	addScopeQueryParam(queryParams, scopes)
 
@@ -160,6 +166,30 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 	}
 
 	return accessToken, nil
+}
+
+func getClientAssertion(managedIdentityClientID string) (string, error) {
+	// exchange auth code to a valid token
+	azScopes := []string{"api://AzureADTokenExchange/.default"}
+	mic, err := azidentity.NewManagedIdentityCredential(
+		&azidentity.ManagedIdentityCredentialOptions{
+			ID: azidentity.ClientID(managedIdentityClientID),
+		},
+	)
+	if err != nil {
+		// return nil, errOAuthTokenExchange.Errorf("error constructing managed identity credential: %w", err)
+		return "", err
+	}
+	getAssertion := func(ctx context.Context) (string, error) {
+		tk, err := mic.GetToken(ctx, policy.TokenRequestOptions{Scopes: azScopes})
+		return tk.Token, err
+	}
+	micToken, err := getAssertion(context.Background())
+	if err != nil {
+		// return nil, errOAuthTokenExchange.Errorf("error getting managed identity token: %w", err)
+		return "", err
+	}
+	return micToken, nil
 }
 
 // ManagedIdentityCallback retrieves a token using the managed identity credential of the Azure service.
@@ -192,32 +222,6 @@ func (c *tokenClientImpl) ManagedIdentityCallback(ctx context.Context) (string, 
 	}
 
 	return tk.Token, nil
-}
-
-// Get Managed Identity Credential for use as a client assertion JWT
-func GetClientAssertionJWT(msiClientID string) (string, error) {
-	// exchange auth code to a valid token
-	managedIdentityClientID := msiClientID
-	azScopes := []string{"api://AzureADTokenExchange/.default"}
-	mic, err := azidentity.NewManagedIdentityCredential(
-		&azidentity.ManagedIdentityCredentialOptions{
-			ID: azidentity.ClientID(managedIdentityClientID),
-		},
-	)
-	if err != nil {
-		// return nil, errOAuthTokenExchange.Errorf("error constructing managed identity credential: %w", err)
-		return "", err
-	}
-	getAssertion := func(ctx context.Context) (string, error) {
-		tk, err := mic.GetToken(ctx, policy.TokenRequestOptions{Scopes: azScopes})
-		return tk.Token, err
-	}
-	micToken, err := getAssertion(context.Background())
-	if err != nil {
-		// return nil, errOAuthTokenExchange.Errorf("error getting managed identity token: %w", err)
-		return "", err
-	}
-	return micToken, nil
 }
 
 func addScopeQueryParam(queryParams url.Values, scopes []string) {
