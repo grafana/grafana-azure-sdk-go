@@ -129,18 +129,18 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 	case ClientSecret:
 		queryParams.Set("client_secret", c.clientSecret)
 
-	case ManagedIdentity:
-		// get client assertion and add it to the request
-		// clientAssertion, err := c.ManagedIdentityCallback(ctx)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("failed to get client assertion: %w", err)
-		// }
-		clientAssertion, err := GetClientAssertionJWT(c.ManagedIdentityClientId)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get client assertion: %w", err)
-		}
-		queryParams.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
-		queryParams.Set("client_assertion", clientAssertion)
+	// case ManagedIdentity:
+	// 	// get client assertion and add it to the request
+	// 	// clientAssertion, err := c.ManagedIdentityCallback(ctx)
+	// 	// if err != nil {
+	// 	// 	return nil, fmt.Errorf("failed to get client assertion: %w", err)
+	// 	// }
+	// 	clientAssertion, err := GetClientAssertionJWT(c.ManagedIdentityClientId)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to get client assertion: %w", err)
+	// 	}
+	// 	queryParams.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	// 	queryParams.Set("client_assertion", clientAssertion)
 		
 	default:
 		return nil, fmt.Errorf("unsupported client authentication method '%s'", c.clientAuthentication + " " + c.clientId + " " + c.clientSecret + " " + c.ManagedIdentityClientId + " " + c.FederatedCredentialAudience)
