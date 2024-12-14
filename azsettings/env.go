@@ -3,7 +3,7 @@ package azsettings
 import (
 	"fmt"
 
-	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azsettings/internal/envutil"
+	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings/internal/envutil"
 )
 
 const (
@@ -20,15 +20,15 @@ const (
 	WorkloadIdentityClientID  = "GFAZPL_WORKLOAD_IDENTITY_CLIENT_ID"
 	WorkloadIdentityTokenFile = "GFAZPL_WORKLOAD_IDENTITY_TOKEN_FILE"
 
-	UserIdentityEnabled                    	= "GFAZPL_USER_IDENTITY_ENABLED"
-	UserIdentityTokenURL                   	= "GFAZPL_USER_IDENTITY_TOKEN_URL"
-	UserIdentityClientAuthentication 	   	= "GFAZPL_USER_IDENTITY_CLIENT_AUTHENTICATION"
-	UserIdentityClientID                   	= "GFAZPL_USER_IDENTITY_CLIENT_ID"
-	UserIdentityClientSecret               	= "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
-	UserIdentityManagedIdentityClientID    	= "GFAZPL_USER_IDENTITY_MANAGED_IDENTITY_CLIENT_ID"
-	UserIdentityFederatedCredentialAudience	= "GFAZPL_USER_IDENTITY_FEDERATED_CREDENTIAL_AUDIENCE"
-	UserIdentityAssertion                  	= "GFAZPL_USER_IDENTITY_ASSERTION"
-	UserIdentityFallbackCredentialsEnabled 	= "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED"
+	UserIdentityEnabled                     = "GFAZPL_USER_IDENTITY_ENABLED"
+	UserIdentityTokenURL                    = "GFAZPL_USER_IDENTITY_TOKEN_URL"
+	UserIdentityClientAuthentication        = "GFAZPL_USER_IDENTITY_CLIENT_AUTHENTICATION"
+	UserIdentityClientID                    = "GFAZPL_USER_IDENTITY_CLIENT_ID"
+	UserIdentityClientSecret                = "GFAZPL_USER_IDENTITY_CLIENT_SECRET"
+	UserIdentityManagedIdentityClientID     = "GFAZPL_USER_IDENTITY_MANAGED_IDENTITY_CLIENT_ID"
+	UserIdentityFederatedCredentialAudience = "GFAZPL_USER_IDENTITY_FEDERATED_CREDENTIAL_AUDIENCE"
+	UserIdentityAssertion                   = "GFAZPL_USER_IDENTITY_ASSERTION"
+	UserIdentityFallbackCredentialsEnabled  = "GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED"
 
 	AzureEntraPasswordCredentialsEnabled = "GFAZPL_AZURE_ENTRA_PASSWORD_CREDENTIALS_ENABLED"
 
@@ -120,13 +120,13 @@ func ReadFromEnv() (*AzureSettings, error) {
 
 		azureSettings.UserIdentityEnabled = true
 		azureSettings.UserIdentityTokenEndpoint = &TokenEndpointSettings{
-			TokenUrl:          				tokenUrl,
-			ClientAuthentication: 			clientAuthentication,
-			ClientId:          				clientId,
-			ClientSecret:      				clientSecret,
-			ManagedIdentityClientId:		managedIdentityClientId,
-			FederatedCredentialAudience:	federatedCredentialAudience,
-			UsernameAssertion: 				usernameAssertion,
+			TokenUrl:                    tokenUrl,
+			ClientAuthentication:        clientAuthentication,
+			ClientId:                    clientId,
+			ClientSecret:                clientSecret,
+			ManagedIdentityClientId:     managedIdentityClientId,
+			FederatedCredentialAudience: federatedCredentialAudience,
+			UsernameAssertion:           usernameAssertion,
 		}
 		azureSettings.UserIdentityFallbackCredentialsEnabled = serviceCredentialsFallback
 	}

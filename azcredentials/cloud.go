@@ -3,7 +3,7 @@ package azcredentials
 import (
 	"fmt"
 
-	"github.com/naizerjohn-ms/grafana-azure-sdk-go/azsettings"
+	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
 )
 
 func GetAzureCloud(settings *azsettings.AzureSettings, credentials AzureCredentials) (string, error) {
