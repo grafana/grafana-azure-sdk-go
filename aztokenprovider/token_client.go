@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
-	//"github.com/urfave/cli"
 )
 
 type TokenClient interface {
