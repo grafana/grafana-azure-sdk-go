@@ -36,9 +36,12 @@ type WorkloadIdentitySettings struct {
 }
 
 type TokenEndpointSettings struct {
-	TokenUrl     string
-	ClientId     string
-	ClientSecret string
+	TokenUrl                    string
+	ClientAuthentication        string
+	ClientId                    string
+	ClientSecret                string
+	ManagedIdentityClientId     string
+	FederatedCredentialAudience string
 
 	// UsernameAssertion allows to use a custom token request assertion when Grafana is behind auth proxy
 	UsernameAssertion bool
