@@ -1,6 +1,7 @@
 module github.com/grafana/grafana-azure-sdk-go/v2
 
-go 1.21
+go 1.22.7
+
 toolchain go1.22.10
 
 require (
