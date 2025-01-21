@@ -130,7 +130,7 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 
 	case ManagedIdentity:
 		// get client assertion and add it to the request
-		clientAssertion, err := c.ManagedIdentityCallback(ctx)
+		clientAssertion, err := c.managedIdentityCallback(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get client assertion: %w", err)
 		}
@@ -158,8 +158,8 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 	return accessToken, nil
 }
 
-// ManagedIdentityCallback retrieves a token using the managed identity credential of the Azure service.
-func (c *tokenClientImpl) ManagedIdentityCallback(ctx context.Context) (string, error) {
+// retrieves a token using the managed identity credential of the Azure service.
+func (c *tokenClientImpl) managedIdentityCallback(ctx context.Context) (string, error) {
 	// Validate required fields for Managed Identity authentication
 	if c.managedIdentityClientId == "" {
 		return "", fmt.Errorf("ManagedIdentityClientID is required for Managed Identity authentication")
