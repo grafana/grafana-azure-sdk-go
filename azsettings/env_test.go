@@ -606,12 +606,12 @@ func TestWriteToEnvStr(t *testing.T) {
 		azureSettings := &AzureSettings{
 			UserIdentityEnabled: true,
 			UserIdentityTokenEndpoint: &TokenEndpointSettings{
-				TokenUrl:     					"https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
-				ClientAuthentication: 			"client_secret_post",
-				ClientId:     					"f85aa887-490d-4fac-9306-9b99ad0aa31d",
-				ClientSecret: 					"87808761-ff7b-492e-bb0d-5de2437ffa55",
-				ManagedIdentityClientId: 		"50dbf8ad-5af9-40b8-ac8e-1a451ee30f6d",
-				FederatedCredentialAudience: 	"api://AzureADTokenExchange",
+				TokenUrl:                    "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
+				ClientAuthentication:        "client_secret_post",
+				ClientId:                    "f85aa887-490d-4fac-9306-9b99ad0aa31d",
+				ClientSecret:                "87808761-ff7b-492e-bb0d-5de2437ffa55",
+				ManagedIdentityClientId:     "50dbf8ad-5af9-40b8-ac8e-1a451ee30f6d",
+				FederatedCredentialAudience: "api://AzureADTokenExchange",
 			},
 		}
 
@@ -632,12 +632,12 @@ func TestWriteToEnvStr(t *testing.T) {
 		azureSettings := &AzureSettings{
 			UserIdentityEnabled: false,
 			UserIdentityTokenEndpoint: &TokenEndpointSettings{
-				TokenUrl:     					"https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
-				ClientAuthentication: 			"client_secret_post",
-				ClientId:     					"f85aa887-490d-4fac-9306-9b99ad0aa31d",
-				ClientSecret: 					"87808761-ff7b-492e-bb0d-5de2437ffa55",
-				ManagedIdentityClientId: 		"50dbf8ad-5af9-40b8-ac8e-1a451ee30f6d",
-				FederatedCredentialAudience: 	"api://AzureADTokenExchange",
+				TokenUrl:                    "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
+				ClientAuthentication:        "client_secret_post",
+				ClientId:                    "f85aa887-490d-4fac-9306-9b99ad0aa31d",
+				ClientSecret:                "87808761-ff7b-492e-bb0d-5de2437ffa55",
+				ManagedIdentityClientId:     "50dbf8ad-5af9-40b8-ac8e-1a451ee30f6d",
+				FederatedCredentialAudience: "api://AzureADTokenExchange",
 			},
 		}
 
@@ -650,13 +650,13 @@ func TestWriteToEnvStr(t *testing.T) {
 		azureSettings := &AzureSettings{
 			UserIdentityEnabled: true,
 			UserIdentityTokenEndpoint: &TokenEndpointSettings{
-				TokenUrl:     					"https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
-				ClientAuthentication: 			"client_secret_post",
-				ClientId:     					"f85aa887-490d-4fac-9306-9b99ad0aa31d",
-				ClientSecret: 					"87808761-ff7b-492e-bb0d-5de2437ffa55",
-				ManagedIdentityClientId: 		"50dbf8ad-5af9-40b8-ac8e-1a451ee30f6d",
-				FederatedCredentialAudience: 	"api://AzureADTokenExchange",
-				UsernameAssertion: true,
+				TokenUrl:                    "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token",
+				ClientAuthentication:        "client_secret_post",
+				ClientId:                    "f85aa887-490d-4fac-9306-9b99ad0aa31d",
+				ClientSecret:                "87808761-ff7b-492e-bb0d-5de2437ffa55",
+				ManagedIdentityClientId:     "50dbf8ad-5af9-40b8-ac8e-1a451ee30f6d",
+				FederatedCredentialAudience: "api://AzureADTokenExchange",
+				UsernameAssertion:           true,
 			},
 		}
 
