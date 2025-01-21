@@ -30,8 +30,8 @@ type tokenClientImpl struct {
 	clientAuthentication        string
 	clientId                    string
 	clientSecret                string
-	ManagedIdentityClientId     string
-	FederatedCredentialAudience string
+	managedIdentityClientId     string
+	federatedCredentialAudience string
 }
 
 type tokenResponse struct {
@@ -64,8 +64,8 @@ func NewTokenClient(endpointUrl string, clientAuthentication string, clientId st
 		clientAuthentication:        clientAuthentication,
 		clientId:                    clientId,
 		clientSecret:                clientSecret,
-		ManagedIdentityClientId:     managedIdentityClientId,
-		FederatedCredentialAudience: federatedCredentialAudience,
+		managedIdentityClientId:     managedIdentityClientId,
+		federatedCredentialAudience: federatedCredentialAudience,
 	}, nil
 }
 
@@ -161,19 +161,19 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 // ManagedIdentityCallback retrieves a token using the managed identity credential of the Azure service.
 func (c *tokenClientImpl) ManagedIdentityCallback(ctx context.Context) (string, error) {
 	// Validate required fields for Managed Identity authentication
-	if c.ManagedIdentityClientId == "" {
+	if c.managedIdentityClientId == "" {
 		return "", fmt.Errorf("ManagedIdentityClientID is required for Managed Identity authentication")
 	}
-	if c.FederatedCredentialAudience == "" {
+	if c.federatedCredentialAudience == "" {
 		return "", fmt.Errorf("FederatedCredentialAudience is required for Managed Identity authentication")
 	}
-	if err := validateFederatedCredentialAudience(c.FederatedCredentialAudience); err != nil {
+	if err := validateFederatedCredentialAudience(c.federatedCredentialAudience); err != nil {
 		return "", err
 	}
 
 	// Prepare Managed Identity Credential
 	mic, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
-		ID: azidentity.ClientID(c.ManagedIdentityClientId),
+		ID: azidentity.ClientID(c.managedIdentityClientId),
 	})
 	if err != nil {
 		return "", fmt.Errorf("error constructing managed identity credential: %w", err)
@@ -181,7 +181,7 @@ func (c *tokenClientImpl) ManagedIdentityCallback(ctx context.Context) (string, 
 
 	// Request token and return
 	tk, err := mic.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{fmt.Sprintf("%s/.default", c.FederatedCredentialAudience)},
+		Scopes: []string{fmt.Sprintf("%s/.default", c.federatedCredentialAudience)},
 	})
 	if err != nil {
 		return "", fmt.Errorf("error getting managed identity token: %w", err)
