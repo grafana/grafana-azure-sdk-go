@@ -149,7 +149,7 @@ func isAzureUser(currentUser azusercontext.CurrentUserContext) (azusercontext.Cu
 		if err != nil {
 			return currentUser, fmt.Errorf("failed to decode user jwt: %s", err)
 		}
-		if claims["authenticatedBy"] != "oauth_azuread" {
+		if claims["authenticatedBy"] != "oauth_azuread" && claims["authenticatedBy"] != "authproxy" {
 			return currentUser, fmt.Errorf("user is not authenticated with Azure AD")
 		}
 
