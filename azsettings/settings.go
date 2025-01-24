@@ -103,6 +103,8 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 
 		if v := cfg.Get(UserIdentityClientAuthentication); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientAuthentication = v
+		} else {
+			settings.UserIdentityTokenEndpoint.ClientAuthentication = "client_secret_post" // Default to client_secret_post if not set
 		}
 		if v := cfg.Get(UserIdentityClientID); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientId = v
