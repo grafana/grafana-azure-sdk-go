@@ -101,11 +101,22 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		settings.UserIdentityTokenEndpoint = &TokenEndpointSettings{}
 		settings.UserIdentityFallbackCredentialsEnabled = true
 
+		if v := cfg.Get(UserIdentityClientAuthentication); v != "" {
+			settings.UserIdentityTokenEndpoint.ClientAuthentication = v
+		} else {
+			settings.UserIdentityTokenEndpoint.ClientAuthentication = "client_secret_post" // Default to client_secret_post if not set
+		}
 		if v := cfg.Get(UserIdentityClientID); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientId = v
 		}
 		if v := cfg.Get(UserIdentityClientSecret); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientSecret = v
+		}
+		if v := cfg.Get(UserIdentityManagedIdentityClientID); v != "" {
+			settings.UserIdentityTokenEndpoint.ManagedIdentityClientId = v
+		}
+		if v := cfg.Get(UserIdentityFederatedCredentialAudience); v != "" {
+			settings.UserIdentityTokenEndpoint.FederatedCredentialAudience = v
 		}
 		if v := cfg.Get(UserIdentityTokenURL); v != "" {
 			settings.UserIdentityTokenEndpoint.TokenUrl = v
