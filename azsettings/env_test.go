@@ -282,21 +282,6 @@ func TestReadFromEnv(t *testing.T) {
 			assert.Error(t, err)
 		})
 
-		t.Run("should fail if client authentication isn't set", func(t *testing.T) {
-			unset1, err := setEnvVar("GFAZPL_USER_IDENTITY_TOKEN_URL", "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token")
-			require.NoError(t, err)
-			defer unset1()
-			unset2, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_AUTHENTICATION", "")
-			require.NoError(t, err)
-			defer unset2()
-			unset3, err := setEnvVar("GFAZPL_USER_IDENTITY_CLIENT_ID", "f85aa887-490d-4fac-9306-9b99ad0aa31d")
-			require.NoError(t, err)
-			defer unset3()
-
-			_, err = ReadFromEnv()
-			assert.Error(t, err)
-		})
-
 		t.Run("should fail if client ID isn't set", func(t *testing.T) {
 			unset1, err := setEnvVar("GFAZPL_USER_IDENTITY_TOKEN_URL", "https://login.microsoftonline.com/fd719c11-a91c-40fd-8379-1e6cd3c59568/oauth2/v2.0/token")
 			require.NoError(t, err)

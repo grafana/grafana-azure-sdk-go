@@ -92,11 +92,8 @@ func ReadFromEnv() (*AzureSettings, error) {
 			return nil, err
 		}
 
-		clientAuthentication, err := envutil.Get(UserIdentityClientAuthentication)
-		if err != nil {
-			err = fmt.Errorf("client authentication must be set when user identity authentication enabled: %w", err)
-			return nil, err
-		}
+		// Default to client_secret_post if not set
+		clientAuthentication := envutil.GetOrDefault(UserIdentityClientAuthentication, "client_secret_post")
 
 		clientId, err := envutil.Get(UserIdentityClientID)
 		if err != nil {
