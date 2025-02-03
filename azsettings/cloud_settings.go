@@ -28,6 +28,7 @@ var predefinedClouds = []*AzureCloudSettings{
 			"portal":                  "https://portal.azure.com",
 			"prometheusResourceId":    "https://prometheus.monitor.azure.com",
 			"resourceManager":         "https://management.azure.com",
+			"ossrdbmsResourceId":      "https://ossrdbms-aad.database.windows.net",
 		},
 	},
 	{
@@ -40,6 +41,7 @@ var predefinedClouds = []*AzureCloudSettings{
 			"portal":                  "https://portal.azure.cn",
 			"prometheusResourceId":    "https://prometheus.monitor.azure.cn",
 			"resourceManager":         "https://management.chinacloudapi.cn",
+			"ossrdbmsResourceId":      "https://ossrdbms-aad.database.chinacloudapi.cn",
 		},
 	},
 	{
@@ -52,6 +54,7 @@ var predefinedClouds = []*AzureCloudSettings{
 			"portal":                  "https://portal.azure.us",
 			"prometheusResourceId":    "https://prometheus.monitor.azure.us",
 			"resourceManager":         "https://management.usgovcloudapi.net",
+			"ossrdbmsResourceId":      "https://ossrdbms-aad.database.usgovcloudapi.net",
 		},
 	},
 }

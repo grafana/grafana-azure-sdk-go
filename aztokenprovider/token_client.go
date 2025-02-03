@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
@@ -23,10 +25,13 @@ type TokenClient interface {
 }
 
 type tokenClientImpl struct {
-	httpClient   *http.Client
-	endpointUrl  string
-	clientId     string
-	clientSecret string
+	httpClient                  *http.Client
+	endpointUrl                 string
+	clientAuthentication        string
+	clientId                    string
+	clientSecret                string
+	managedIdentityClientId     string
+	federatedCredentialAudience string
 }
 
 type tokenResponse struct {
@@ -37,12 +42,30 @@ type tokenResponse struct {
 	Scope        string `json:"scope"`
 }
 
-func NewTokenClient(endpointUrl string, clientId string, clientSecret string, httpClient *http.Client) (TokenClient, error) {
+// List of supported client authentication methods for token requests
+const (
+	ClientSecret    = "client_secret_post"
+	ManagedIdentity = "managed_identity"
+)
+
+// List of supported audiences in Azure
+var supportedFederatedCredentialAudiences = []string{
+	"api://AzureADTokenExchange",      // Public
+	"api://AzureADTokenExchangeUSGov", // US Gov
+	"api://AzureADTokenExchangeChina", // Mooncake
+	"api://AzureADTokenExchangeUSNat", // USNat
+	"api://AzureADTokenExchangeUSSec", // USSec
+}
+
+func NewTokenClient(endpointUrl string, clientAuthentication string, clientId string, clientSecret string, managedIdentityClientId string, federatedCredentialAudience string, httpClient *http.Client) (TokenClient, error) {
 	return &tokenClientImpl{
-		httpClient:   httpClient,
-		endpointUrl:  endpointUrl,
-		clientId:     clientId,
-		clientSecret: clientSecret,
+		httpClient:                  httpClient,
+		endpointUrl:                 endpointUrl,
+		clientAuthentication:        clientAuthentication,
+		clientId:                    clientId,
+		clientSecret:                clientSecret,
+		managedIdentityClientId:     managedIdentityClientId,
+		federatedCredentialAudience: federatedCredentialAudience,
 	}, nil
 }
 
@@ -100,7 +123,25 @@ func (c *tokenClientImpl) FromUsername(ctx context.Context, username string, sco
 
 func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Values, scopes []string) (*AccessToken, error) {
 	queryParams.Set("client_id", c.clientId)
-	queryParams.Set("client_secret", c.clientSecret)
+
+	switch c.clientAuthentication {
+	case ClientSecret:
+		queryParams.Set("client_secret", c.clientSecret)
+
+	case ManagedIdentity:
+		// get client assertion and add it to the request
+		clientAssertion, err := c.managedIdentityCallback(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get client assertion: %w", err)
+		}
+
+		queryParams.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+		queryParams.Set("client_assertion", clientAssertion)
+
+	default:
+		return nil, fmt.Errorf("unsupported client authentication method '%s'", c.clientAuthentication)
+	}
+
 	addScopeQueryParam(queryParams, scopes)
 
 	result := &tokenResponse{}
@@ -115,6 +156,38 @@ func (c *tokenClientImpl) requestToken(ctx context.Context, queryParams url.Valu
 	}
 
 	return accessToken, nil
+}
+
+// retrieves a token using the managed identity credential of the Azure service.
+func (c *tokenClientImpl) managedIdentityCallback(ctx context.Context) (string, error) {
+	// Validate required fields for Managed Identity authentication
+	if c.managedIdentityClientId == "" {
+		return "", fmt.Errorf("ManagedIdentityClientID is required for Managed Identity authentication")
+	}
+	if c.federatedCredentialAudience == "" {
+		return "", fmt.Errorf("FederatedCredentialAudience is required for Managed Identity authentication")
+	}
+	if err := validateFederatedCredentialAudience(c.federatedCredentialAudience); err != nil {
+		return "", err
+	}
+
+	// Prepare Managed Identity Credential
+	mic, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
+		ID: azidentity.ClientID(c.managedIdentityClientId),
+	})
+	if err != nil {
+		return "", fmt.Errorf("error constructing managed identity credential: %w", err)
+	}
+
+	// Request token and return
+	tk, err := mic.GetToken(ctx, policy.TokenRequestOptions{
+		Scopes: []string{fmt.Sprintf("%s/.default", c.federatedCredentialAudience)},
+	})
+	if err != nil {
+		return "", fmt.Errorf("error getting managed identity token: %w", err)
+	}
+
+	return tk.Token, nil
 }
 
 func addScopeQueryParam(queryParams url.Values, scopes []string) {
@@ -226,4 +299,13 @@ func getContentType(resp *http.Response) (string, string, error) {
 	charset := params["charset"]
 
 	return mediaType, charset, nil
+}
+
+func validateFederatedCredentialAudience(federatedCredentialAudience string) error {
+	for _, supportedFederatedCredentialAudience := range supportedFederatedCredentialAudiences {
+		if federatedCredentialAudience == supportedFederatedCredentialAudience {
+			return nil
+		}
+	}
+	return fmt.Errorf("federated credential audience %s is not supported", federatedCredentialAudience)
 }

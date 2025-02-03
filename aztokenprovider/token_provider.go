@@ -95,7 +95,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			}
 		}
 		tokenEndpoint := settings.UserIdentityTokenEndpoint
-		client, err := NewTokenClient(tokenEndpoint.TokenUrl, tokenEndpoint.ClientId, tokenEndpoint.ClientSecret, http.DefaultClient)
+		client, err := NewTokenClient(tokenEndpoint.TokenUrl, tokenEndpoint.ClientAuthentication, tokenEndpoint.ClientId, tokenEndpoint.ClientSecret, tokenEndpoint.ManagedIdentityClientId, tokenEndpoint.FederatedCredentialAudience, http.DefaultClient)
 		if err != nil {
 			err = fmt.Errorf("failed to initialize user authentication provider: %w", err)
 			return nil, err
@@ -149,7 +149,7 @@ func isAzureUser(currentUser azusercontext.CurrentUserContext) (azusercontext.Cu
 		if err != nil {
 			return currentUser, fmt.Errorf("failed to decode user jwt: %s", err)
 		}
-		if claims["authenticatedBy"] != "oauth_azuread" {
+		if claims["authenticatedBy"] != "oauth_azuread" && claims["authenticatedBy"] != "authproxy" {
 			return currentUser, fmt.Errorf("user is not authenticated with Azure AD")
 		}
 

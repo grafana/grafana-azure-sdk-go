@@ -25,6 +25,8 @@ type AzureSettings struct {
 
 	CustomCloudList     []*AzureCloudSettings
 	CustomCloudListJSON string
+
+	AzureEntraPasswordCredentialsEnabled bool
 }
 
 type WorkloadIdentitySettings struct {
@@ -34,9 +36,12 @@ type WorkloadIdentitySettings struct {
 }
 
 type TokenEndpointSettings struct {
-	TokenUrl     string
-	ClientId     string
-	ClientSecret string
+	TokenUrl                    string
+	ClientAuthentication        string
+	ClientId                    string
+	ClientSecret                string
+	ManagedIdentityClientId     string
+	FederatedCredentialAudience string
 
 	// UsernameAssertion allows to use a custom token request assertion when Grafana is behind auth proxy
 	UsernameAssertion bool
@@ -59,8 +64,10 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		return settings, false
 	}
 
+	hasSettings := false
 	if v := cfg.Get(AzureAuthEnabled); v == strconv.FormatBool(true) {
 		settings.AzureAuthEnabled = true
+		hasSettings = true
 	}
 
 	if customCloudsJSON := cfg.Get(AzureCustomCloudsConfig); customCloudsJSON != "" {
@@ -68,9 +75,11 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		if err := settings.SetCustomClouds(customCloudsJSON); err != nil {
 			backend.Logger.Error("Error setting custom clouds:  %w", err)
 		}
+		if settings.CustomCloudListJSON != "" {
+			hasSettings = true
+		}
 	}
 
-	hasSettings := false
 	if v := cfg.Get(AzureCloud); v != "" {
 		settings.Cloud = v
 		hasSettings = true
@@ -92,11 +101,22 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		settings.UserIdentityTokenEndpoint = &TokenEndpointSettings{}
 		settings.UserIdentityFallbackCredentialsEnabled = true
 
+		if v := cfg.Get(UserIdentityClientAuthentication); v != "" {
+			settings.UserIdentityTokenEndpoint.ClientAuthentication = v
+		} else {
+			settings.UserIdentityTokenEndpoint.ClientAuthentication = "client_secret_post" // Default to client_secret_post if not set
+		}
 		if v := cfg.Get(UserIdentityClientID); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientId = v
 		}
 		if v := cfg.Get(UserIdentityClientSecret); v != "" {
 			settings.UserIdentityTokenEndpoint.ClientSecret = v
+		}
+		if v := cfg.Get(UserIdentityManagedIdentityClientID); v != "" {
+			settings.UserIdentityTokenEndpoint.ManagedIdentityClientId = v
+		}
+		if v := cfg.Get(UserIdentityFederatedCredentialAudience); v != "" {
+			settings.UserIdentityTokenEndpoint.FederatedCredentialAudience = v
 		}
 		if v := cfg.Get(UserIdentityTokenURL); v != "" {
 			settings.UserIdentityTokenEndpoint.TokenUrl = v
@@ -124,6 +144,11 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		if v := cfg.Get(WorkloadIdentityTokenFile); v != "" {
 			settings.WorkloadIdentitySettings.TokenFile = v
 		}
+	}
+
+	if v := cfg.Get(AzureEntraPasswordCredentialsEnabled); v == strconv.FormatBool(true) {
+		settings.AzureEntraPasswordCredentialsEnabled = true
+		hasSettings = true
 	}
 
 	return settings, hasSettings
