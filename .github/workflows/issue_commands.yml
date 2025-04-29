@@ -12,10 +12,11 @@ jobs:
           repository: "grafana/grafana-github-actions"
           path: ./actions
           ref: main
+          persist-credentials: false
       - name: Install Actions
         run: npm install --production --prefix ./actions
       - name: Run Commands
         uses: ./actions/commands
-        with:          
+        with:
           token: ${{secrets.GH_BOT_ACCESS_TOKEN}}
           configPath: issue_commands
