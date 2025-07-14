@@ -14,6 +14,7 @@ type CurrentUserContext struct {
 	IdToken        string
 	AccessToken    string
 	GrafanaIdToken string
+	Cookies        string
 }
 
 func WithCurrentUser(ctx context.Context, currentUser CurrentUserContext) context.Context {
