@@ -243,7 +243,6 @@ func requestUrlForm(ctx context.Context, httpClient *http.Client, requestUrl str
 			}
 		}
 	} else {
-		// Log at a more visible level if this is critical for your use case
 		backend.Logger.Debug("No user context available; cookies will not be forwarded")
 	}
 
