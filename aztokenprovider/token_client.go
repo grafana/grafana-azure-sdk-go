@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/grafana/grafana-azure-sdk-go/v2/azusercontext"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
@@ -229,6 +230,22 @@ func requestUrlForm(ctx context.Context, httpClient *http.Client, requestUrl str
 
 	req.Header.Set("X-Client-SKU", "github.com/grafana/grafana-azure-sdk-go/v2")
 	req.Header.Set("X-Client-Ver", "2.0")
+
+	// Attempt to get user context and forward cookies if available
+	if currentUser, ok := azusercontext.GetCurrentUser(ctx); ok {
+		if currentUser.Cookies != "" {
+			// Validate that cookies don't contain newlines which could break HTTP headers
+			sanitizedCookies := strings.ReplaceAll(currentUser.Cookies, "\n", "")
+			sanitizedCookies = strings.ReplaceAll(sanitizedCookies, "\r", "")
+
+			if sanitizedCookies != "" {
+				req.Header.Add("Cookie", sanitizedCookies)
+			}
+		}
+	} else {
+		// Log at a more visible level if this is critical for your use case
+		backend.Logger.Debug("No user context available; cookies will not be forwarded")
+	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
