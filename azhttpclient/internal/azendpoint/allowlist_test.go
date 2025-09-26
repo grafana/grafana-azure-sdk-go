@@ -305,5 +305,76 @@ func TestAllowlist(t *testing.T) {
 			ok := a.IsAllowed(u)
 			assert.False(t, ok)
 		})
+
+		t.Run("should match nested wildcards", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://first.second.*.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
+		t.Run("should match multiple nested wildcards", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://first.*.*.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
+		t.Run("should correctly fail match with multiple nested wildcards", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://first.*.*.net",
+				"https://first.*.*.fifth.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.fourth.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.False(t, ok)
+		})
+
+		t.Run("should correctly match with nested wildcards and prefix wildcard", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.fourth.*.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.fourth.fifth.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
+
+		t.Run("should correctly match prefix wildcard with multiple subdomains", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.fourth.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.fourth.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
+
+		t.Run("should not support an allow list of any address", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.*.*",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.fourth.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.False(t, ok)
+		})
 	})
 }
