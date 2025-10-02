@@ -119,10 +119,17 @@ func (v *EndpointAllowlist) matchEntry(allowEntry allowEntry, scheme string, hos
 			}
 		} else {
 			splitHost := strings.Split(strings.ToLower(host), ".")
+			allowedHostSplit := strings.Split(strings.ToLower(allowEntry.host), ".")
+
+			// The number of path segments in the host should be at least equal to the allowed host
+			if len(splitHost) < len(allowedHostSplit) {
+				return false
+			}
+
 			// We remove the initial . value
-			splitAllowedHost := strings.Split(strings.ToLower(allowEntry.host[1:]), ".")
+			allowedHostExclPrefix := allowedHostSplit[1:]
 			// Find the first non-wildcard part in the allowed host
-			nonWildcardAllowPath := slices.IndexFunc(splitAllowedHost, func(r string) bool {
+			nonWildcardAllowPath := slices.IndexFunc(allowedHostExclPrefix, func(r string) bool {
 				return r != "*"
 			})
 
@@ -135,7 +142,7 @@ func (v *EndpointAllowlist) matchEntry(allowEntry allowEntry, scheme string, hos
 			// e.g. for an allowed endpoint of *.second.*.net
 			// and a host of first.second.third.net
 			// we will truncate the host to second.third.net
-			nonWildcardPath := splitAllowedHost[nonWildcardAllowPath]
+			nonWildcardPath := allowedHostExclPrefix[nonWildcardAllowPath]
 			hostPath := slices.Index(splitHost, nonWildcardPath)
 
 			// If the host doesn't contain the first allowed non-wildcard part then it can't match
@@ -144,11 +151,11 @@ func (v *EndpointAllowlist) matchEntry(allowEntry allowEntry, scheme string, hos
 			}
 
 			hostExcludingPrefix := splitHost[hostPath:]
-			if len(hostExcludingPrefix) != len(splitAllowedHost) {
+			if len(hostExcludingPrefix) != len(allowedHostExclPrefix) {
 				return false
 			}
 
-			return nestedWildcardMatcher(hostExcludingPrefix, splitAllowedHost)
+			return nestedWildcardMatcher(hostExcludingPrefix, allowedHostExclPrefix)
 		}
 		return false
 	}
