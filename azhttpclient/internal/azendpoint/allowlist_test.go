@@ -305,5 +305,112 @@ func TestAllowlist(t *testing.T) {
 			ok := a.IsAllowed(u)
 			assert.False(t, ok)
 		})
+
+		t.Run("should match nested wildcards", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://first.second.*.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
+		t.Run("should match multiple nested wildcards", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://first.*.*.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
+		t.Run("should correctly fail match with multiple nested wildcards", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://first.*.*.net",
+				"https://first.*.*.fifth.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.fourth.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.False(t, ok)
+		})
+
+		t.Run("should correctly match with nested wildcards and prefix wildcard", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.fourth.*.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.fourth.fifth.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
+
+		t.Run("should correctly match prefix wildcard with multiple subdomains", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.fourth.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.fourth.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
+
+		t.Run("should not support an allow list of any address", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.*.*",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://first.second.third.fourth.net/")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.False(t, ok)
+		})
+
+		t.Run("will not match exact domain if prefix is expected", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.path1.*.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://path1.path2.net")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.False(t, ok)
+		})
+
+		t.Run("will not match multiple path segments for nested wildcards", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.path1.*.pathend",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://x.path1.y.foo.z.pathend")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.False(t, ok)
+		})
+
+		t.Run("correctly matches endpoints with wildcards at the end", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.foo.*",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://x.foo.test")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
 	})
 }
