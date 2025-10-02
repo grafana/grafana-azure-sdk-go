@@ -113,7 +113,7 @@ func (v *EndpointAllowlist) matchEntry(allowEntry allowEntry, scheme string, hos
 			allowSuffixLen := len(allowEntry.host)
 			// Host should be longer than suffix (not equal)
 			if hostLen > allowSuffixLen {
-				if strings.ToLower(host[hostLen-allowSuffixLen:]) == allowEntry.host {
+				if strings.EqualFold(host[hostLen-allowSuffixLen:], allowEntry.host) {
 					return true
 				}
 			}
