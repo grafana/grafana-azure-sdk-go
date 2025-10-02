@@ -376,5 +376,41 @@ func TestAllowlist(t *testing.T) {
 			ok := a.IsAllowed(u)
 			assert.False(t, ok)
 		})
+
+		t.Run("will not match exact domain if prefix is expected", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.path1.*.net",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://path1.path2.net")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.False(t, ok)
+		})
+
+		t.Run("will not match multiple path segments for nested wildcards", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.path1.*.pathend",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://x.path1.y.foo.z.pathend")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.False(t, ok)
+		})
+
+		t.Run("correctly matches endpoints with wildcards at the end", func(t *testing.T) {
+			a, err := Allowlist([]string{
+				"https://*.foo.*",
+			})
+			require.NoError(t, err)
+			u, err := url.Parse("https://x.foo.test")
+			require.NoError(t, err)
+
+			ok := a.IsAllowed(u)
+			assert.True(t, ok)
+		})
 	})
 }
