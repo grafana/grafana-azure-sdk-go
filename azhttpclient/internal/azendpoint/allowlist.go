@@ -155,7 +155,6 @@ func (v *EndpointAllowlist) matchEntry(allowEntry allowEntry, scheme string, hos
 }
 
 func nestedWildcardMatcher(splitHost []string, splitAllowedHost []string) bool {
-	matches := true
 	if len(splitHost) != len(splitAllowedHost) {
 		return false
 	}
@@ -164,11 +163,10 @@ func nestedWildcardMatcher(splitHost []string, splitAllowedHost []string) bool {
 			continue
 		}
 		if splitHost[i] != part {
-			matches = false
-			break
+			return false
 		}
 	}
-	return matches
+	return true
 }
 
 var knownPorts = map[string]string{
