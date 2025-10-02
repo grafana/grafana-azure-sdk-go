@@ -54,7 +54,7 @@ This logic is currently utilised in the Azure Data Explorer data source which al
 
 Endpoints can be specified as URLs with or without ports. A scheme is required in the URL. If no port is specified the scheme must be one of `http` or `https` which will default the port to `80` or `443` respectively.
 
-Wildcards can also be specified in the URL and they can be nested. A prefix wildcard can be used e.g. `https://*.kusto.windows.net`. This will match any address with the suffix `kusto.windows.net` (but note that it will not match `https://kusto.windows.net` as prefix path segments are expected) and the `https` scheme. A nested wildcard endpoint can also be used e.g. `https://test.*.windows.net` which will much any value in the wildcard position. Finally, prefix and nested wildcards can be mixed e.g. `https://*.test.*.windows.net` which will match endpoints like `https://one.two.three.test.any.windows.net`.
+Wildcards can also be specified in the URL and they can be nested. A prefix wildcard can be used e.g. `https://*.kusto.windows.net`. This will match any address with the suffix `kusto.windows.net` (but note that it will not match `https://kusto.windows.net` as prefix path segments are expected) and the `https` scheme. A nested wildcard endpoint can also be used e.g. `https://test.*.windows.net` which will much any value in the wildcard position (but note that it will only match a single path segment rather than multiple). Finally, prefix and nested wildcards can be mixed e.g. `https://*.test.*.windows.net` which will match endpoints like `https://one.two.three.test.any.windows.net`.
 
 ### azusercontext
 
