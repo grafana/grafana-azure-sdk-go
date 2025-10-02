@@ -39,7 +39,7 @@ func Allowlist(allowedEndpoints []string) (*EndpointAllowlist, error) {
 		}
 
 		if len(allowedHost) > 2 && strings.HasPrefix(allowedHost, "*.") {
-			nestedWildcard := strings.Contains(allowedHost[2:], "*.")
+			nestedWildcard := strings.Contains(allowedHost[2:], "*")
 			entries[i] = allowEntry{
 				scheme:         allowedScheme,
 				port:           allowedPort,
