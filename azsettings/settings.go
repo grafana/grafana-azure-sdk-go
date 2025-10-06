@@ -45,6 +45,14 @@ type TokenEndpointSettings struct {
 
 	// UsernameAssertion allows to use a custom token request assertion when Grafana is behind auth proxy
 	UsernameAssertion bool
+
+	// Internal properties to track if values were overridden in the `azure` section
+	TokenUrlOverride                    bool
+	ClientAuthenticationOverride        bool
+	ClientIdOverride                    bool
+	ClientSecretOverride                bool
+	ManagedIdentityClientIdOverride     bool
+	FederatedCredentialAudienceOverride bool
 }
 
 func (settings *AzureSettings) GetDefaultCloud() string {
