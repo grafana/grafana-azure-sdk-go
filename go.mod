@@ -3,8 +3,8 @@ module github.com/grafana/grafana-azure-sdk-go/v2
 go 1.24.6
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.12.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/grafana/grafana-plugin-sdk-go v0.279.0
 	github.com/stretchr/testify v1.11.1
@@ -13,7 +13,7 @@ require (
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/apache/arrow-go/v18 v18.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
