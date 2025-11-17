@@ -3,7 +3,7 @@ module github.com/grafana/grafana-azure-sdk-go/v2
 go 1.24.6
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/grafana/grafana-plugin-sdk-go v0.279.0
