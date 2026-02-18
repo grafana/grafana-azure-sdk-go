@@ -19,6 +19,8 @@ func GetAzureCloud(settings *azsettings.AzureSettings, credentials AzureCredenti
 		return settings.GetDefaultCloud(), nil
 	case *AzureClientSecretCredentials:
 		return c.AzureCloud, nil
+	case *AzureClientCertificateCredentials:
+		return c.AzureCloud, nil
 	case *AzureClientSecretOboCredentials:
 		return c.ClientSecretCredentials.AzureCloud, nil
 	case *AzureEntraPasswordCredentials:

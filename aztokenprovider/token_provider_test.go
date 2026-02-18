@@ -109,6 +109,24 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 		_, err = provider.GetAccessToken(ctx, scopes)
 		require.NoError(t, err)
 	})
+
+	t.Run("should resolve client certificate retriever if auth type is client certificate", func(t *testing.T) {
+		credentials := &azcredentials.AzureClientCertificateCredentials{
+			AzureCloud:        azsettings.AzurePublic,
+			ClientCertificate: "-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----",
+		}
+
+		provider, err := NewAzureAccessTokenProvider(settings, credentials, false)
+		require.NoError(t, err)
+		require.IsType(t, &serviceTokenProvider{}, provider)
+
+		getAccessTokenFunc = func(credential TokenRetriever, scopes []string) {
+			assert.IsType(t, &clientCertificateTokenRetriever{}, credential)
+		}
+
+		_, err = provider.GetAccessToken(ctx, scopes)
+		require.NoError(t, err)
+	})
 }
 
 var mockClientSecretCredentials = &azcredentials.AzureClientSecretCredentials{
@@ -120,6 +138,12 @@ var mockClientSecretCredentials = &azcredentials.AzureClientSecretCredentials{
 
 var mockMsiCredentials = &azcredentials.AzureManagedIdentityCredentials{}
 var mockWorkloadIdentityCredentials = &azcredentials.AzureWorkloadIdentityCredentials{}
+var mockClientCertificateCredentials = &azcredentials.AzureClientCertificateCredentials{
+	AzureCloud:        azsettings.AzurePublic,
+	TenantId:          "TEST-TENANT",
+	ClientId:          "TEST-CLIENT-ID",
+	ClientCertificate: "-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----",
+}
 
 func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 	settingsNotConfigured := &azsettings.AzureSettings{}
@@ -169,6 +193,15 @@ func TestNewAzureAccessTokenProvider_UserIdentity(t *testing.T) {
 		provider, err := NewAzureAccessTokenProvider(settings, &azcredentials.AadCurrentUserCredentials{
 			ServiceCredentialsEnabled: true,
 			ServiceCredentials:        mockClientSecretCredentials,
+		}, true)
+		require.NoError(t, err)
+		require.IsType(t, &userTokenProvider{}, provider)
+	})
+
+	t.Run("should return user provider with certificate credentials when user identity configured", func(t *testing.T) {
+		provider, err := NewAzureAccessTokenProvider(settings, &azcredentials.AadCurrentUserCredentials{
+			ServiceCredentialsEnabled: true,
+			ServiceCredentials:        mockClientCertificateCredentials,
 		}, true)
 		require.NoError(t, err)
 		require.IsType(t, &userTokenProvider{}, provider)
@@ -518,6 +551,34 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 
 			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
 				assert.IsType(t, &workloadIdentityTokenRetriever{}, retriever)
+			}
+
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: nil,
+			})
+			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.NoError(t, err)
+		})
+
+		t.Run("should use clientCertificateTokenRetriever when service principal credentials are enabled", func(t *testing.T) {
+			tokenRetriever, retrieverErr := getClientCertificateTokenRetriever(
+				&azsettings.AzureSettings{UserIdentityFallbackCredentialsEnabled: true},
+				mockClientCertificateCredentials,
+			)
+			require.NoError(t, retrieverErr)
+
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:     &tokenCacheFake{},
+				tokenRetriever: tokenRetriever,
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &clientCertificateTokenRetriever{}, retriever)
 			}
 
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{

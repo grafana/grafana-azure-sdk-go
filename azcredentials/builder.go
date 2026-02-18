@@ -96,6 +96,41 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		}
 		return credentials, nil
 
+	case AzureAuthClientCertificate:
+		cloud, err := maputil.GetString(credentialsObj, "azureCloud")
+		if err != nil {
+			return nil, err
+		}
+		tenantId, err := maputil.GetString(credentialsObj, "tenantId")
+		if err != nil {
+			return nil, err
+		}
+		clientId, err := maputil.GetString(credentialsObj, "clientId")
+		if err != nil {
+			return nil, err
+		}
+		clientCertificate, ok := secureData["clientCertificate"]
+		if !ok || clientCertificate == "" {
+			return nil, fmt.Errorf("no certificate provided")
+		}
+		privateKey, ok := secureData["privateKey"]
+		if !ok || privateKey == "" {
+			return nil, fmt.Errorf("no private key provided")
+		}
+
+		// Private key password is optional
+		privateKeyPassword, _ := secureData["privateKeyPassword"]
+
+		credentials := &AzureClientCertificateCredentials{
+			AzureCloud:         cloud,
+			TenantId:           tenantId,
+			ClientId:           clientId,
+			ClientCertificate:  clientCertificate,
+			PrivateKey:         privateKey,
+			PrivateKeyPassword: privateKeyPassword,
+		}
+		return credentials, nil
+
 	case AzureAuthClientSecretObo:
 		cloud, err := maputil.GetString(credentialsObj, "azureCloud")
 		if err != nil {
