@@ -134,7 +134,7 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 		credentials := &azcredentials.AzureClientCertificateCredentials{
 			AzureCloud:         azsettings.AzurePublic,
 			PrivateKey:         "BASE64_PFX_BLOB",
-			PrivateKeyPassword: "fake-private-key-password",
+			CertificatePassword: "fake-private-key-password",
 			CertificateFormat:  "pfx",
 		}
 

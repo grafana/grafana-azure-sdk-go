@@ -123,7 +123,7 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 
 		var clientCertificate string
 		var privateKey string
-		var privateKeyPassword string
+		var certificatePassword string
 		var ok bool
 
 		clientCertificate, ok = secureData["clientCertificate"]
@@ -137,8 +137,8 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 				return nil, fmt.Errorf("no private key provided")
 			}
 		case "pfx":
-			privateKeyPassword, ok = secureData["privateKeyPassword"]
-			if !ok || privateKeyPassword == "" {
+			certificatePassword, ok = secureData["certificatePassword"]
+			if !ok || certificatePassword == "" {
 				return nil, fmt.Errorf("no password provided")
 			}
 		}
@@ -150,7 +150,7 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 			CertificateFormat:  certificateFormat,
 			ClientCertificate:  clientCertificate,
 			PrivateKey:         privateKey,
-			PrivateKeyPassword: privateKeyPassword,
+			CertificatePassword: certificatePassword,
 		}
 		return credentials, nil
 

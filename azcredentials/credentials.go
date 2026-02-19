@@ -50,9 +50,9 @@ type AzureClientCertificateCredentials struct {
 	ClientId          string
 	CertificateFormat string
 	// Can either be a plain text PEM certificate or a base64 encoded pfx file  depending on the certificate format
-	ClientCertificate  string
-	PrivateKey         string
-	PrivateKeyPassword string
+	ClientCertificate   string
+	PrivateKey          string
+	CertificatePassword string
 }
 
 type AzureEntraPasswordCredentials struct {

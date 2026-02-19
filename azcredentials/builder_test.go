@@ -356,8 +356,8 @@ func TestFromDatasourceData(t *testing.T) {
 			},
 		}
 		var secureData = map[string]string{
-			"clientCertificate":  "BASE64_PFX_BLOB",
-			"privateKeyPassword": "pfx-password",
+			"clientCertificate":   "BASE64_PFX_BLOB",
+			"certificatePassword": "pfx-password",
 		}
 
 		result, err := FromDatasourceData(data, secureData)
@@ -380,7 +380,7 @@ func TestFromDatasourceData(t *testing.T) {
 			},
 		}
 		var secureData = map[string]string{
-			"privateKeyPassword": "pfx-password",
+			"certificatePassword": "pfx-password",
 		}
 
 		_, err := FromDatasourceData(data, secureData)

@@ -24,7 +24,7 @@ type clientCertificateTokenRetriever struct {
 	certificateFormat  string
 	clientCertificate  string
 	privateKey         string
-	privateKeyPassword string
+	certificatePassword string
 	credential         azcore.TokenCredential
 }
 
@@ -53,7 +53,7 @@ func getClientCertificateTokenRetriever(settings *azsettings.AzureSettings, cred
 		certificateFormat:  credentials.CertificateFormat,
 		clientCertificate:  credentials.ClientCertificate,
 		privateKey:         credentials.PrivateKey,
-		privateKeyPassword: credentials.PrivateKeyPassword,
+		certificatePassword: credentials.CertificatePassword,
 	}, nil
 }
 
@@ -71,7 +71,7 @@ func (c *clientCertificateTokenRetriever) Init() error {
 	case "pem":
 		// Join private key and certificate into a single string as they should be parsed together
 		joinedKeyCert = []byte(c.privateKey + "\n" + c.clientCertificate)
-		certs, key, err = azidentity.ParseCertificates([]byte(joinedKeyCert), []byte(c.privateKeyPassword))
+		certs, key, err = azidentity.ParseCertificates([]byte(joinedKeyCert), []byte(c.certificatePassword))
 	case "pfx":
 		// If we have a password, we need to decode the private key and use the pkcs12 library to parse the certificate and private key
 		// We only accept pfx files that are base64 encoded
@@ -79,7 +79,7 @@ func (c *clientCertificateTokenRetriever) Init() error {
 		if err != nil {
 			return err
 		}
-		privateKey, cert, caCerts, err := pkcs12.DecodeChain(clientCertificateDecoded, c.privateKeyPassword)
+		privateKey, cert, caCerts, err := pkcs12.DecodeChain(clientCertificateDecoded, c.certificatePassword)
 		if err != nil {
 			return err
 		}
