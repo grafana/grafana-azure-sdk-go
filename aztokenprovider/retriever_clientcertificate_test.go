@@ -64,7 +64,7 @@ func TestAzureTokenProvider_getClientCertificateCredential(t *testing.T) {
 	t.Run("should map pfx fields", func(t *testing.T) {
 		credentials := defaultCredentials()
 		credentials.CertificateFormat = "pfx"
-		credentials.PrivateKey = "BASE64_PFX_BLOB"
+		credentials.ClientCertificate = "BASE64_PFX_BLOB"
 		credentials.PrivateKeyPassword = "fake-private-key-password"
 
 		result, err := getClientCertificateTokenRetriever(settings, credentials)
@@ -73,7 +73,7 @@ func TestAzureTokenProvider_getClientCertificateCredential(t *testing.T) {
 
 		credential := result.(*clientCertificateTokenRetriever)
 		assert.Equal(t, "pfx", credential.certificateFormat)
-		assert.Equal(t, "BASE64_PFX_BLOB", credential.privateKey)
+		assert.Equal(t, "BASE64_PFX_BLOB", credential.clientCertificate)
 		assert.Equal(t, "fake-private-key-password", credential.privateKeyPassword)
 	})
 

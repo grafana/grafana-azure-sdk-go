@@ -356,7 +356,7 @@ func TestFromDatasourceData(t *testing.T) {
 			},
 		}
 		var secureData = map[string]string{
-			"privateKey":         "BASE64_PFX_BLOB",
+			"clientCertificate":  "BASE64_PFX_BLOB",
 			"privateKeyPassword": "pfx-password",
 		}
 
@@ -366,10 +366,10 @@ func TestFromDatasourceData(t *testing.T) {
 
 		credential := result.(*AzureClientCertificateCredentials)
 		assert.Equal(t, "pfx", credential.CertificateFormat)
-		assert.Equal(t, "BASE64_PFX_BLOB", credential.PrivateKey)
+		assert.Equal(t, "BASE64_PFX_BLOB", credential.ClientCertificate)
 	})
 
-	t.Run("should return error for pfx auth when private key missing", func(t *testing.T) {
+	t.Run("should return error for pfx auth when client certificate missing", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
 				"authType":          "clientcertificate",
@@ -385,7 +385,7 @@ func TestFromDatasourceData(t *testing.T) {
 
 		_, err := FromDatasourceData(data, secureData)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "no private key provided")
+		require.ErrorContains(t, err, "no certificate provided")
 	})
 
 	t.Run("should return error for pfx auth when password missing", func(t *testing.T) {
@@ -399,7 +399,7 @@ func TestFromDatasourceData(t *testing.T) {
 			},
 		}
 		var secureData = map[string]string{
-			"privateKey": "BASE64_PFX_BLOB",
+			"clientCertificate": "BASE64_PFX_BLOB",
 		}
 
 		_, err := FromDatasourceData(data, secureData)

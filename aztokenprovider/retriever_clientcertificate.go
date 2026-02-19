@@ -75,11 +75,11 @@ func (c *clientCertificateTokenRetriever) Init() error {
 	case "pfx":
 		// If we have a password, we need to decode the private key and use the pkcs12 library to parse the certificate and private key
 		// We only accept pfx files that are base64 encoded
-		privateKeyDecoded, err := base64.StdEncoding.DecodeString(c.privateKey)
+		clientCertificateDecoded, err := base64.StdEncoding.DecodeString(c.clientCertificate)
 		if err != nil {
 			return err
 		}
-		privateKey, cert, caCerts, err := pkcs12.DecodeChain(privateKeyDecoded, c.privateKeyPassword)
+		privateKey, cert, caCerts, err := pkcs12.DecodeChain(clientCertificateDecoded, c.privateKeyPassword)
 		if err != nil {
 			return err
 		}

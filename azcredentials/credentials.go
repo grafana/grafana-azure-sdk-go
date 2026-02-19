@@ -49,8 +49,8 @@ type AzureClientCertificateCredentials struct {
 	TenantId          string
 	ClientId          string
 	CertificateFormat string
-	ClientCertificate string
-	// Can either be a plain text private key or a base64 encoded pfx file  depending on the certificate format
+	// Can either be a plain text PEM certificate or a base64 encoded pfx file  depending on the certificate format
+	ClientCertificate  string
 	PrivateKey         string
 	PrivateKeyPassword string
 }
