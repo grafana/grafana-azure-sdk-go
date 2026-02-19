@@ -18,15 +18,14 @@ import (
 )
 
 type clientCertificateTokenRetriever struct {
-	cloudConf           cloud.Configuration
-	tenantId            string
-	clientId            string
-	certificateFormat   string
-	clientCertificate   string
-	privateKey          string
-	encryptedPrivateKey string
-	privateKeyPassword  string
-	credential          azcore.TokenCredential
+	cloudConf          cloud.Configuration
+	tenantId           string
+	clientId           string
+	certificateFormat  string
+	clientCertificate  string
+	privateKey         string
+	privateKeyPassword string
+	credential         azcore.TokenCredential
 }
 
 func getClientCertificateTokenRetriever(settings *azsettings.AzureSettings, credentials *azcredentials.AzureClientCertificateCredentials) (TokenRetriever, error) {
@@ -49,13 +48,12 @@ func getClientCertificateTokenRetriever(settings *azsettings.AzureSettings, cred
 			ActiveDirectoryAuthorityHost: authorityHost,
 			Services:                     map[cloud.ServiceName]cloud.ServiceConfiguration{},
 		},
-		tenantId:            credentials.TenantId,
-		clientId:            credentials.ClientId,
-		certificateFormat:   credentials.CertificateFormat,
-		clientCertificate:   credentials.ClientCertificate,
-		privateKey:          credentials.PrivateKey,
-		encryptedPrivateKey: credentials.EncryptedPrivateKey,
-		privateKeyPassword:  credentials.PrivateKeyPassword,
+		tenantId:           credentials.TenantId,
+		clientId:           credentials.ClientId,
+		certificateFormat:  credentials.CertificateFormat,
+		clientCertificate:  credentials.ClientCertificate,
+		privateKey:         credentials.PrivateKey,
+		privateKeyPassword: credentials.PrivateKeyPassword,
 	}, nil
 }
 
@@ -77,7 +75,7 @@ func (c *clientCertificateTokenRetriever) Init() error {
 	case "pfx":
 		// If we have a password, we need to decode the private key and use the pkcs12 library to parse the certificate and private key
 		// We only accept pfx files that are base64 encoded
-		privateKeyDecoded, err := base64.StdEncoding.DecodeString(c.encryptedPrivateKey)
+		privateKeyDecoded, err := base64.StdEncoding.DecodeString(c.privateKey)
 		if err != nil {
 			return err
 		}

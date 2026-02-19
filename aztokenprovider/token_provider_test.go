@@ -132,10 +132,10 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 
 	t.Run("should resolve client certificate retriever if auth type is client certificate (pfx)", func(t *testing.T) {
 		credentials := &azcredentials.AzureClientCertificateCredentials{
-			AzureCloud:          azsettings.AzurePublic,
-			EncryptedPrivateKey: "BASE64_PFX_BLOB",
-			PrivateKeyPassword:  "fake-private-key-password",
-			CertificateFormat:   "pfx",
+			AzureCloud:         azsettings.AzurePublic,
+			PrivateKey:         "BASE64_PFX_BLOB",
+			PrivateKeyPassword: "fake-private-key-password",
+			CertificateFormat:  "pfx",
 		}
 
 		provider, err := NewAzureAccessTokenProvider(settings, credentials, false)

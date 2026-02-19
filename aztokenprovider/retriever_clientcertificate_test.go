@@ -16,15 +16,14 @@ func TestAzureTokenProvider_getClientCertificateCredential(t *testing.T) {
 
 	defaultCredentials := func() *azcredentials.AzureClientCertificateCredentials {
 		return &azcredentials.AzureClientCertificateCredentials{
-			AzureCloud:          azsettings.AzurePublic,
-			Authority:           "",
-			TenantId:            "7dcf1d1a-4ec0-41f2-ac29-c1538a698bc4",
-			ClientId:            "1af7c188-e5b6-4f96-81b8-911761bdd459",
-			CertificateFormat:   "pem",
-			ClientCertificate:   "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----",
-			PrivateKey:          "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----",
-			EncryptedPrivateKey: "",
-			PrivateKeyPassword:  "fake-private-key-password",
+			AzureCloud:         azsettings.AzurePublic,
+			Authority:          "",
+			TenantId:           "7dcf1d1a-4ec0-41f2-ac29-c1538a698bc4",
+			ClientId:           "1af7c188-e5b6-4f96-81b8-911761bdd459",
+			CertificateFormat:  "pem",
+			ClientCertificate:  "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----",
+			PrivateKey:         "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----",
+			PrivateKeyPassword: "fake-private-key-password",
 		}
 	}
 
@@ -43,7 +42,6 @@ func TestAzureTokenProvider_getClientCertificateCredential(t *testing.T) {
 		assert.Equal(t, "pem", credential.certificateFormat)
 		assert.Equal(t, "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----", credential.clientCertificate)
 		assert.Equal(t, "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----", credential.privateKey)
-		assert.Equal(t, "", credential.encryptedPrivateKey)
 		assert.Equal(t, "fake-private-key-password", credential.privateKeyPassword)
 	})
 
@@ -66,9 +64,8 @@ func TestAzureTokenProvider_getClientCertificateCredential(t *testing.T) {
 	t.Run("should map pfx fields", func(t *testing.T) {
 		credentials := defaultCredentials()
 		credentials.CertificateFormat = "pfx"
-		credentials.EncryptedPrivateKey = "BASE64_PFX_BLOB"
-		credentials.ClientCertificate = ""
-		credentials.PrivateKey = ""
+		credentials.PrivateKey = "BASE64_PFX_BLOB"
+		credentials.PrivateKeyPassword = "fake-private-key-password"
 
 		result, err := getClientCertificateTokenRetriever(settings, credentials)
 		require.NoError(t, err)
@@ -76,7 +73,7 @@ func TestAzureTokenProvider_getClientCertificateCredential(t *testing.T) {
 
 		credential := result.(*clientCertificateTokenRetriever)
 		assert.Equal(t, "pfx", credential.certificateFormat)
-		assert.Equal(t, "BASE64_PFX_BLOB", credential.encryptedPrivateKey)
+		assert.Equal(t, "BASE64_PFX_BLOB", credential.privateKey)
 		assert.Equal(t, "fake-private-key-password", credential.privateKeyPassword)
 	})
 

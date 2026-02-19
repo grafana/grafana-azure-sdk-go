@@ -124,24 +124,19 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		var clientCertificate string
 		var privateKey string
 		var privateKeyPassword string
-		var encryptedPrivateKey string
 		var ok bool
 
+		privateKey, ok = secureData["privateKey"]
+		if !ok || privateKey == "" {
+			return nil, fmt.Errorf("no private key provided")
+		}
 		switch certificateFormat {
 		case "pem":
 			clientCertificate, ok = secureData["clientCertificate"]
 			if !ok || clientCertificate == "" {
 				return nil, fmt.Errorf("no certificate provided")
 			}
-			privateKey, ok = secureData["privateKey"]
-			if !ok || privateKey == "" {
-				return nil, fmt.Errorf("no private key provided")
-			}
 		case "pfx":
-			encryptedPrivateKey, ok = secureData["encryptedPrivateKey"]
-			if !ok || encryptedPrivateKey == "" {
-				return nil, fmt.Errorf("no encrypted private key provided")
-			}
 			privateKeyPassword, ok = secureData["privateKeyPassword"]
 			if !ok || privateKeyPassword == "" {
 				return nil, fmt.Errorf("no password provided")
@@ -149,14 +144,13 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		}
 
 		credentials := &AzureClientCertificateCredentials{
-			AzureCloud:          cloud,
-			TenantId:            tenantId,
-			ClientId:            clientId,
-			CertificateFormat:   certificateFormat,
-			ClientCertificate:   clientCertificate,
-			PrivateKey:          privateKey,
-			EncryptedPrivateKey: encryptedPrivateKey,
-			PrivateKeyPassword:  privateKeyPassword,
+			AzureCloud:         cloud,
+			TenantId:           tenantId,
+			ClientId:           clientId,
+			CertificateFormat:  certificateFormat,
+			ClientCertificate:  clientCertificate,
+			PrivateKey:         privateKey,
+			PrivateKeyPassword: privateKeyPassword,
 		}
 		return credentials, nil
 
