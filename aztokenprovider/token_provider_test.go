@@ -110,10 +110,32 @@ func TestNewAzureAccessTokenProvider_ServiceIdentity(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("should resolve client certificate retriever if auth type is client certificate", func(t *testing.T) {
+	t.Run("should resolve client certificate retriever if auth type is client certificate (pem)", func(t *testing.T) {
 		credentials := &azcredentials.AzureClientCertificateCredentials{
 			AzureCloud:        azsettings.AzurePublic,
 			ClientCertificate: "-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----",
+			PrivateKey:        "-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----",
+			CertificateFormat: "pem",
+		}
+
+		provider, err := NewAzureAccessTokenProvider(settings, credentials, false)
+		require.NoError(t, err)
+		require.IsType(t, &serviceTokenProvider{}, provider)
+
+		getAccessTokenFunc = func(credential TokenRetriever, scopes []string) {
+			assert.IsType(t, &clientCertificateTokenRetriever{}, credential)
+		}
+
+		_, err = provider.GetAccessToken(ctx, scopes)
+		require.NoError(t, err)
+	})
+
+	t.Run("should resolve client certificate retriever if auth type is client certificate (pfx)", func(t *testing.T) {
+		credentials := &azcredentials.AzureClientCertificateCredentials{
+			AzureCloud:          azsettings.AzurePublic,
+			EncryptedPrivateKey: "BASE64_PFX_BLOB",
+			PrivateKeyPassword:  "fake-private-key-password",
+			CertificateFormat:   "pfx",
 		}
 
 		provider, err := NewAzureAccessTokenProvider(settings, credentials, false)

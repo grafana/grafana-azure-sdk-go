@@ -2,6 +2,9 @@ package aztokenprovider
 
 import (
 	"context"
+	"crypto"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -11,16 +14,19 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 type clientCertificateTokenRetriever struct {
-	cloudConf          cloud.Configuration
-	tenantId           string
-	clientId           string
-	clientCertificate  string
-	privateKey         string
-	privateKeyPassword string
-	credential         azcore.TokenCredential
+	cloudConf           cloud.Configuration
+	tenantId            string
+	clientId            string
+	certificateFormat   string
+	clientCertificate   string
+	privateKey          string
+	encryptedPrivateKey string
+	privateKeyPassword  string
+	credential          azcore.TokenCredential
 }
 
 func getClientCertificateTokenRetriever(settings *azsettings.AzureSettings, credentials *azcredentials.AzureClientCertificateCredentials) (TokenRetriever, error) {
@@ -43,11 +49,13 @@ func getClientCertificateTokenRetriever(settings *azsettings.AzureSettings, cred
 			ActiveDirectoryAuthorityHost: authorityHost,
 			Services:                     map[cloud.ServiceName]cloud.ServiceConfiguration{},
 		},
-		tenantId:           credentials.TenantId,
-		clientId:           credentials.ClientId,
-		clientCertificate:  credentials.ClientCertificate,
-		privateKey:         credentials.PrivateKey,
-		privateKeyPassword: credentials.PrivateKeyPassword,
+		tenantId:            credentials.TenantId,
+		clientId:            credentials.ClientId,
+		certificateFormat:   credentials.CertificateFormat,
+		clientCertificate:   credentials.ClientCertificate,
+		privateKey:          credentials.PrivateKey,
+		encryptedPrivateKey: credentials.EncryptedPrivateKey,
+		privateKeyPassword:  credentials.PrivateKeyPassword,
 	}, nil
 }
 
@@ -56,9 +64,31 @@ func (c *clientCertificateTokenRetriever) GetCacheKey(grafanaMultiTenantId strin
 }
 
 func (c *clientCertificateTokenRetriever) Init() error {
-	// Join private key and certificate into a single string as they should be parsed together
-	joinedKeyCert := []byte(c.privateKey + "\n" + c.clientCertificate)
-	certs, key, err := azidentity.ParseCertificates([]byte(joinedKeyCert), []byte(c.privateKeyPassword))
+	var joinedKeyCert []byte
+	var certs []*x509.Certificate
+	var key crypto.PrivateKey
+	var err error
+
+	switch c.certificateFormat {
+	case "pem":
+		// Join private key and certificate into a single string as they should be parsed together
+		joinedKeyCert = []byte(c.privateKey + "\n" + c.clientCertificate)
+		certs, key, err = azidentity.ParseCertificates([]byte(joinedKeyCert), []byte(c.privateKeyPassword))
+	case "pfx":
+		// If we have a password, we need to decode the private key and use the pkcs12 library to parse the certificate and private key
+		// We only accept pfx files that are base64 encoded
+		privateKeyDecoded, err := base64.StdEncoding.DecodeString(c.encryptedPrivateKey)
+		if err != nil {
+			return err
+		}
+		privateKey, cert, caCerts, err := pkcs12.DecodeChain(privateKeyDecoded, c.privateKeyPassword)
+		if err != nil {
+			return err
+		}
+		certs = append(certs, cert)
+		certs = append(certs, caCerts...)
+		key = privateKey
+	}
 	if err != nil {
 		return err
 	}

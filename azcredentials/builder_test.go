@@ -238,19 +238,19 @@ func TestFromDatasourceData(t *testing.T) {
 		assert.Equal(t, credential.ClientSecretCredentials.ClientSecret, "FAKE-SECRET")
 	})
 
-	t.Run("should return client certificate credentials when certificate auth configured", func(t *testing.T) {
+	t.Run("should return client certificate credentials when certificate auth configured (pem)", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
-				"authType":   "clientcertificate",
-				"azureCloud": "AzureChinaCloud",
-				"tenantId":   "TENANT-ID",
-				"clientId":   "CLIENT-TD",
+				"authType":          "clientcertificate",
+				"azureCloud":        "AzureChinaCloud",
+				"tenantId":          "TENANT-ID",
+				"clientId":          "CLIENT-TD",
+				"certificateFormat": "pem",
 			},
 		}
 		var secureData = map[string]string{
-			"clientCertificate":  "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----",
-			"privateKey":         "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----",
-			"privateKeyPassword": "cert-password",
+			"clientCertificate": "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----",
+			"privateKey":        "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----",
 		}
 
 		result, err := FromDatasourceData(data, secureData)
@@ -263,18 +263,19 @@ func TestFromDatasourceData(t *testing.T) {
 		assert.Equal(t, credential.AzureCloud, azsettings.AzureChina)
 		assert.Equal(t, credential.TenantId, "TENANT-ID")
 		assert.Equal(t, credential.ClientId, "CLIENT-TD")
+		assert.Equal(t, credential.CertificateFormat, "pem")
 		assert.Equal(t, credential.ClientCertificate, "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----")
 		assert.Equal(t, credential.PrivateKey, "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----")
-		assert.Equal(t, credential.PrivateKeyPassword, "cert-password")
 	})
 
-	t.Run("should return error for certificate auth when certificate missing", func(t *testing.T) {
+	t.Run("should return error for certificate auth when certificate missing (pem)", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
-				"authType":   "clientcertificate",
-				"azureCloud": "AzureCloud",
-				"tenantId":   "TENANT-ID",
-				"clientId":   "CLIENT-TD",
+				"authType":          "clientcertificate",
+				"azureCloud":        "AzureCloud",
+				"tenantId":          "TENANT-ID",
+				"clientId":          "CLIENT-TD",
+				"certificateFormat": "pem",
 			},
 		}
 		var secureData = map[string]string{}
@@ -284,13 +285,14 @@ func TestFromDatasourceData(t *testing.T) {
 		require.ErrorContains(t, err, "no certificate provided")
 	})
 
-	t.Run("should return error for certificate auth when private key missing", func(t *testing.T) {
+	t.Run("should return error for certificate auth when private key missing (pem)", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
-				"authType":   "clientcertificate",
-				"azureCloud": "AzureCloud",
-				"tenantId":   "TENANT-ID",
-				"clientId":   "CLIENT-TD",
+				"authType":          "clientcertificate",
+				"azureCloud":        "AzureCloud",
+				"tenantId":          "TENANT-ID",
+				"clientId":          "CLIENT-TD",
+				"certificateFormat": "pem",
 			},
 		}
 		var secureData = map[string]string{
@@ -302,7 +304,7 @@ func TestFromDatasourceData(t *testing.T) {
 		require.ErrorContains(t, err, "no private key provided")
 	})
 
-	t.Run("should not return error for certificate auth when private key password missing", func(t *testing.T) {
+	t.Run("should return error for certificate auth when certificate format missing", func(t *testing.T) {
 		var data = map[string]interface{}{
 			"azureCredentials": map[string]interface{}{
 				"authType":   "clientcertificate",
@@ -316,13 +318,91 @@ func TestFromDatasourceData(t *testing.T) {
 			"privateKey":        "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----",
 		}
 
+		_, err := FromDatasourceData(data, secureData)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "no certificate format provided")
+	})
+
+	t.Run("should return error for certificate auth when certificate format invalid", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":          "clientcertificate",
+				"azureCloud":        "AzureCloud",
+				"tenantId":          "TENANT-ID",
+				"clientId":          "CLIENT-TD",
+				"certificateFormat": "invalid",
+			},
+		}
+		var secureData = map[string]string{
+			"clientCertificate": "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----",
+			"privateKey":        "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----",
+		}
+
+		_, err := FromDatasourceData(data, secureData)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "invalid certificate format provided")
+	})
+
+	t.Run("should return client certificate credentials when certificate auth configured (pfx)", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":          "clientcertificate",
+				"azureCloud":        "AzureCloud",
+				"tenantId":          "TENANT-ID",
+				"clientId":          "CLIENT-TD",
+				"certificateFormat": "pfx",
+			},
+		}
+		var secureData = map[string]string{
+			"encryptedPrivateKey": "BASE64_PFX_BLOB",
+			"privateKeyPassword":  "pfx-password",
+		}
+
 		result, err := FromDatasourceData(data, secureData)
 		require.NoError(t, err)
-		require.NotNil(t, result)
 		require.IsType(t, &AzureClientCertificateCredentials{}, result)
 
 		credential := result.(*AzureClientCertificateCredentials)
-		assert.Equal(t, "", credential.PrivateKeyPassword)
+		assert.Equal(t, "pfx", credential.CertificateFormat)
+		assert.Equal(t, "BASE64_PFX_BLOB", credential.EncryptedPrivateKey)
+	})
+
+	t.Run("should return error for pfx auth when encrypted key missing", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":          "clientcertificate",
+				"azureCloud":        "AzureCloud",
+				"tenantId":          "TENANT-ID",
+				"clientId":          "CLIENT-TD",
+				"certificateFormat": "pfx",
+			},
+		}
+		var secureData = map[string]string{
+			"privateKeyPassword": "pfx-password",
+		}
+
+		_, err := FromDatasourceData(data, secureData)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "no encrypted private key provided")
+	})
+
+	t.Run("should return error for pfx auth when password missing", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":          "clientcertificate",
+				"azureCloud":        "AzureCloud",
+				"tenantId":          "TENANT-ID",
+				"clientId":          "CLIENT-TD",
+				"certificateFormat": "pfx",
+			},
+		}
+		var secureData = map[string]string{
+			"encryptedPrivateKey": "BASE64_PFX_BLOB",
+		}
+
+		_, err := FromDatasourceData(data, secureData)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "no password provided")
 	})
 
 	t.Run("should return client secret when legacy client secret saved", func(t *testing.T) {

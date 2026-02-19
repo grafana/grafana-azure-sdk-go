@@ -109,25 +109,54 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		if err != nil {
 			return nil, err
 		}
-		clientCertificate, ok := secureData["clientCertificate"]
-		if !ok || clientCertificate == "" {
-			return nil, fmt.Errorf("no certificate provided")
+
+		certificateFormat, err := maputil.GetString(credentialsObj, "certificateFormat")
+		if err != nil {
+			return nil, fmt.Errorf("no certificate format provided")
 		}
-		privateKey, ok := secureData["privateKey"]
-		if !ok || privateKey == "" {
-			return nil, fmt.Errorf("no private key provided")
+		if certificateFormat == "" {
+			return nil, fmt.Errorf("no certificate format provided")
+		}
+		if certificateFormat != "pem" && certificateFormat != "pfx" {
+			return nil, fmt.Errorf("invalid certificate format provided")
 		}
 
-		// Private key password is optional
-		privateKeyPassword, _ := secureData["privateKeyPassword"]
+		var clientCertificate string
+		var privateKey string
+		var privateKeyPassword string
+		var encryptedPrivateKey string
+		var ok bool
+
+		switch certificateFormat {
+		case "pem":
+			clientCertificate, ok = secureData["clientCertificate"]
+			if !ok || clientCertificate == "" {
+				return nil, fmt.Errorf("no certificate provided")
+			}
+			privateKey, ok = secureData["privateKey"]
+			if !ok || privateKey == "" {
+				return nil, fmt.Errorf("no private key provided")
+			}
+		case "pfx":
+			encryptedPrivateKey, ok = secureData["encryptedPrivateKey"]
+			if !ok || encryptedPrivateKey == "" {
+				return nil, fmt.Errorf("no encrypted private key provided")
+			}
+			privateKeyPassword, ok = secureData["privateKeyPassword"]
+			if !ok || privateKeyPassword == "" {
+				return nil, fmt.Errorf("no password provided")
+			}
+		}
 
 		credentials := &AzureClientCertificateCredentials{
-			AzureCloud:         cloud,
-			TenantId:           tenantId,
-			ClientId:           clientId,
-			ClientCertificate:  clientCertificate,
-			PrivateKey:         privateKey,
-			PrivateKeyPassword: privateKeyPassword,
+			AzureCloud:          cloud,
+			TenantId:            tenantId,
+			ClientId:            clientId,
+			CertificateFormat:   certificateFormat,
+			ClientCertificate:   clientCertificate,
+			PrivateKey:          privateKey,
+			EncryptedPrivateKey: encryptedPrivateKey,
+			PrivateKeyPassword:  privateKeyPassword,
 		}
 		return credentials, nil
 

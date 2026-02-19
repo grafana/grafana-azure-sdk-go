@@ -44,13 +44,15 @@ type AzureClientSecretCredentials struct {
 // AzureClientCertificateCredentials "App Registration (Certificate)" AAD service identity credentials
 // configured in the datasource.
 type AzureClientCertificateCredentials struct {
-	AzureCloud         string
-	Authority          string
-	TenantId           string
-	ClientId           string
-	ClientCertificate  string
-	PrivateKey         string
-	PrivateKeyPassword string
+	AzureCloud          string
+	Authority           string
+	TenantId            string
+	ClientId            string
+	ClientCertificate   string
+	PrivateKey          string
+	CertificateFormat   string
+	EncryptedPrivateKey string
+	PrivateKeyPassword  string
 }
 
 type AzureEntraPasswordCredentials struct {
