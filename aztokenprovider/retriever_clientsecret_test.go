@@ -39,7 +39,7 @@ func TestAzureTokenProvider_getClientSecretCredential(t *testing.T) {
 		assert.Equal(t, "0416d95e-8af8-472c-aaa3-15c93c46080a", credential.clientSecret)
 	})
 
-	t.Run("authority should selected based on cloud", func(t *testing.T) {
+	t.Run("authority should be selected based on cloud", func(t *testing.T) {
 		credentials := defaultCredentials()
 		credentials.AzureCloud = azsettings.AzureChina
 

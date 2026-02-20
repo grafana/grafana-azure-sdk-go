@@ -5,6 +5,7 @@ const (
 	AzureAuthManagedIdentity          = "msi"
 	AzureAuthWorkloadIdentity         = "workloadidentity"
 	AzureAuthClientSecret             = "clientsecret"
+	AzureAuthClientCertificate        = "clientcertificate"
 	AzureAuthClientSecretObo          = "clientsecret-obo"
 	AzureAuthEntraPasswordCredentials = "ad-password"
 )
@@ -40,6 +41,20 @@ type AzureClientSecretCredentials struct {
 	ClientSecret string
 }
 
+// AzureClientCertificateCredentials "App Registration (Certificate)" AAD service identity credentials
+// configured in the datasource.
+type AzureClientCertificateCredentials struct {
+	AzureCloud        string
+	Authority         string
+	TenantId          string
+	ClientId          string
+	CertificateFormat string
+	// Can either be a plain text PEM certificate or a base64 encoded pfx file  depending on the certificate format
+	ClientCertificate   string
+	PrivateKey          string
+	CertificatePassword string
+}
+
 type AzureEntraPasswordCredentials struct {
 	Password string
 	UserId   string
@@ -67,6 +82,10 @@ func (credentials *AzureWorkloadIdentityCredentials) AzureAuthType() string {
 
 func (credentials *AzureClientSecretCredentials) AzureAuthType() string {
 	return AzureAuthClientSecret
+}
+
+func (credentials *AzureClientCertificateCredentials) AzureAuthType() string {
+	return AzureAuthClientCertificate
 }
 
 func (credentials *AzureClientSecretOboCredentials) AzureAuthType() string {

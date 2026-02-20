@@ -18,7 +18,9 @@ The built-in `AzureCredentials`:
 
 - `AadCurrentUserCredentials`
 - `AzureManagedIdentityCredentials`
+- `AzureWorkloadIdentityCredentials`
 - `AzureClientSecretCredentials`
+- `AzureClientCertificateCredentials`
 - `AzureClientSecretOboCredentials`
 
 ### azhttpclient
@@ -36,7 +38,7 @@ authOpts.Scopes([]string{"https://datasource.example.org/.default"})
 
 // Optionally, register custom token providers
 authOpts.AddTokenProvider("custom-auth-type", func (...) (aztokenprovider.AzureTokenProvider, error) {
-	return NewCustomTokenProvider(...), nil
+    return NewCustomTokenProvider(...), nil
 })
 
 // Configure the client

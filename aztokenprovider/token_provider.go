@@ -64,6 +64,15 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			tokenCache:     azureTokenCache,
 			tokenRetriever: tokenRetriever,
 		}, nil
+	case *azcredentials.AzureClientCertificateCredentials:
+		tokenRetriever, err := getClientCertificateTokenRetriever(settings, c)
+		if err != nil {
+			return nil, err
+		}
+		return &serviceTokenProvider{
+			tokenCache:     azureTokenCache,
+			tokenRetriever: tokenRetriever,
+		}, nil
 	case *azcredentials.AadCurrentUserCredentials:
 		if !userIdentitySupported {
 			err = fmt.Errorf("user identity authentication is not supported by this datasource")
@@ -84,6 +93,11 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			switch c.ServiceCredentials.(type) {
 			case *azcredentials.AzureClientSecretCredentials:
 				tokenRetriever, err = getClientSecretTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureClientSecretCredentials))
+				if err != nil {
+					return nil, err
+				}
+			case *azcredentials.AzureClientCertificateCredentials:
+				tokenRetriever, err = getClientCertificateTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureClientCertificateCredentials))
 				if err != nil {
 					return nil, err
 				}

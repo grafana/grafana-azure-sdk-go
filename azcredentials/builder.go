@@ -96,6 +96,64 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 		}
 		return credentials, nil
 
+	case AzureAuthClientCertificate:
+		cloud, err := maputil.GetString(credentialsObj, "azureCloud")
+		if err != nil {
+			return nil, err
+		}
+		tenantId, err := maputil.GetString(credentialsObj, "tenantId")
+		if err != nil {
+			return nil, err
+		}
+		clientId, err := maputil.GetString(credentialsObj, "clientId")
+		if err != nil {
+			return nil, err
+		}
+
+		certificateFormat, err := maputil.GetString(credentialsObj, "certificateFormat")
+		if err != nil {
+			return nil, fmt.Errorf("no certificate format provided")
+		}
+		if certificateFormat == "" {
+			return nil, fmt.Errorf("no certificate format provided")
+		}
+		if certificateFormat != "pem" && certificateFormat != "pfx" {
+			return nil, fmt.Errorf("invalid certificate format provided")
+		}
+
+		var clientCertificate string
+		var privateKey string
+		var certificatePassword string
+		var ok bool
+
+		clientCertificate, ok = secureData["clientCertificate"]
+		if !ok || clientCertificate == "" {
+			return nil, fmt.Errorf("no certificate provided")
+		}
+		switch certificateFormat {
+		case "pem":
+			privateKey, ok = secureData["privateKey"]
+			if !ok || privateKey == "" {
+				return nil, fmt.Errorf("no private key provided")
+			}
+		case "pfx":
+			certificatePassword, ok = secureData["certificatePassword"]
+			if !ok || certificatePassword == "" {
+				return nil, fmt.Errorf("no password provided")
+			}
+		}
+
+		credentials := &AzureClientCertificateCredentials{
+			AzureCloud:         cloud,
+			TenantId:           tenantId,
+			ClientId:           clientId,
+			CertificateFormat:  certificateFormat,
+			ClientCertificate:  clientCertificate,
+			PrivateKey:         privateKey,
+			CertificatePassword: certificatePassword,
+		}
+		return credentials, nil
+
 	case AzureAuthClientSecretObo:
 		cloud, err := maputil.GetString(credentialsObj, "azureCloud")
 		if err != nil {
