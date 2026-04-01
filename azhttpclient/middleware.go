@@ -52,6 +52,9 @@ func applyAzureAuth(tokenProvider aztokenprovider.AzureTokenProvider, sessionPro
 		if endpoints != nil {
 			endpoint := azendpoint.Endpoint(*req.URL)
 			if !endpoints.IsAllowed(endpoint) {
+				if endpoint == nil {
+					return nil, fmt.Errorf("request to invalid endpoint '%s' is not allowed by the datasource", req.URL.String())
+				}
 				return nil, fmt.Errorf("request to endpoint '%s' is not allowed by the datasource", endpoint.String())
 			}
 		}
