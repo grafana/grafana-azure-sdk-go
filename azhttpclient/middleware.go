@@ -47,10 +47,16 @@ func AzureMiddleware(authOpts *AuthOptions, credentials azcredentials.AzureCrede
 func applyAzureAuth(tokenProvider aztokenprovider.AzureTokenProvider, sessionProvider *userSessionProvider,
 	scopes []string, endpoints *azendpoint.EndpointAllowlist, next http.RoundTripper) http.RoundTripper {
 	return httpclient.RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		if req == nil {
+			return nil, fmt.Errorf("request is nil")
+		}
 		reqContext := req.Context()
 
 		if endpoints != nil {
 			endpoint := azendpoint.Endpoint(*req.URL)
+			if endpoint == nil {
+				return nil, fmt.Errorf("request to invalid endpoint '%s' is not allowed by the datasource", req.URL.String())
+			}
 			if !endpoints.IsAllowed(endpoint) {
 				return nil, fmt.Errorf("request to endpoint '%s' is not allowed by the datasource", endpoint.String())
 			}
