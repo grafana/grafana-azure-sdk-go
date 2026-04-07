@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
-	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/grafana/grafana-plugin-sdk-go v0.291.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.79.3
