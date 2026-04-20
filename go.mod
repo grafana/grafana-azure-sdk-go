@@ -9,7 +9,7 @@ require (
 	github.com/grafana/grafana-plugin-sdk-go v0.291.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.80.0
-	software.sslmate.com/src/go-pkcs12 v0.7.0
+	software.sslmate.com/src/go-pkcs12 v0.7.1
 )
 
 require (
