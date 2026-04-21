@@ -202,6 +202,32 @@ func getFromCredentialsObject(credentialsObj map[string]interface{}, secureData 
 			ClientId: clientId,
 		}
 		return credentials, nil
+
+	case AzureAuthFederatedIdentity:
+		sourceClientId, err := maputil.GetStringOptional(credentialsObj, "sourceClientId")
+		if err != nil {
+			return nil, err
+		}
+		targetTenantId, err := maputil.GetString(credentialsObj, "targetTenantId")
+		if err != nil {
+			return nil, err
+		}
+		targetClientId, err := maputil.GetString(credentialsObj, "targetClientId")
+		if err != nil {
+			return nil, err
+		}
+		federatedCredentialAudience, err := maputil.GetString(credentialsObj, "federatedCredentialAudience")
+		if err != nil {
+			return nil, err
+		}
+
+		credentials := &AzureFederatedIdentityCredentials{
+			SourceClientId:              sourceClientId,
+			TargetTenantId:              targetTenantId,
+			TargetClientId:              targetClientId,
+			FederatedCredentialAudience: federatedCredentialAudience,
+		}
+		return credentials, nil
 	default:
 		err := fmt.Errorf("the authentication type '%s' not supported", authType)
 		return nil, err
