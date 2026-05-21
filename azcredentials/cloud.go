@@ -25,6 +25,9 @@ func GetAzureCloud(settings *azsettings.AzureSettings, credentials AzureCredenti
 		return c.ClientSecretCredentials.AzureCloud, nil
 	case *AzureEntraPasswordCredentials:
 		return settings.GetDefaultCloud(), nil
+	case *AzureFederatedIdentityCredentials:
+		// In case of federated identity, the cloud is always same as where Grafana is hosted
+		return settings.GetDefaultCloud(), nil
 	default:
 		err := fmt.Errorf("the Azure credentials of type '%s' not supported", c.AzureAuthType())
 		return "", err
