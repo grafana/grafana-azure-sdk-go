@@ -494,4 +494,64 @@ func TestFromDatasourceData(t *testing.T) {
 		_, err := FromDatasourceData(data, secureData)
 		assert.Error(t, err)
 	})
+
+	t.Run("should return federated identity credentials when federated identity auth configured", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":                    "federatedidentity",
+				"sourceClientId":              "SOURCE-CLIENT-ID",
+				"targetTenantId":              "TARGET-TENANT-ID",
+				"targetClientId":              "TARGET-CLIENT-ID",
+				"federatedCredentialAudience": "api://AzureADTokenExchange",
+			},
+		}
+		var secureData = map[string]string{}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		assert.IsType(t, &AzureFederatedIdentityCredentials{}, result)
+		credential := result.(*AzureFederatedIdentityCredentials)
+
+		assert.Equal(t, "SOURCE-CLIENT-ID", credential.SourceClientId)
+		assert.Equal(t, "TARGET-TENANT-ID", credential.TargetTenantId)
+		assert.Equal(t, "TARGET-CLIENT-ID", credential.TargetClientId)
+		assert.Equal(t, "api://AzureADTokenExchange", credential.FederatedCredentialAudience)
+	})
+
+	t.Run("should return federated identity credentials when source client ID omitted", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":                    "federatedidentity",
+				"targetTenantId":              "TARGET-TENANT-ID",
+				"targetClientId":              "TARGET-CLIENT-ID",
+				"federatedCredentialAudience": "api://AzureADTokenExchange",
+			},
+		}
+		var secureData = map[string]string{}
+
+		result, err := FromDatasourceData(data, secureData)
+		require.NoError(t, err)
+
+		require.NotNil(t, result)
+		assert.IsType(t, &AzureFederatedIdentityCredentials{}, result)
+		credential := result.(*AzureFederatedIdentityCredentials)
+
+		assert.Equal(t, "", credential.SourceClientId)
+	})
+
+	t.Run("should return error for federated identity with missing target tenant ID", func(t *testing.T) {
+		var data = map[string]interface{}{
+			"azureCredentials": map[string]interface{}{
+				"authType":                    "federatedidentity",
+				"targetClientId":              "TARGET-CLIENT-ID",
+				"federatedCredentialAudience": "api://AzureADTokenExchange",
+			},
+		}
+		var secureData = map[string]string{}
+
+		_, err := FromDatasourceData(data, secureData)
+		require.Error(t, err)
+	})
 }
