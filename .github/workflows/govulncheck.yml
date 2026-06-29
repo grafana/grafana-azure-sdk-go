@@ -1,14 +1,19 @@
-name: Test SDK
+name: govulncheck
 on:
   pull_request:
     types: [opened, reopened, synchronize]
     branches:
       - main
+    # Only scan when the dependency graph changes; avoids failing unrelated
+    # PRs when new advisories land in the vuln DB between dependency updates.
+    paths:
+      - go.mod
+      - go.sum
 
 permissions: {}
 
 jobs:
-  test:
+  govulncheck:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -21,7 +26,5 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
-      - name: Download dependencies
-        run: go mod download
-      - name: Test with the Go CLI
-        run: go test -mod=readonly ./...
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.5.0 ./...
