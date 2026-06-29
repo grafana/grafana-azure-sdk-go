@@ -10,12 +10,13 @@ on:
       - go.mod
       - go.sum
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   govulncheck:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
