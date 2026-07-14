@@ -18,6 +18,11 @@ var (
 	processSeedOk bool
 )
 
+// ErrUserContextNotConfigured is returned by GetSessionId when there is no Grafana
+// user in the request context (e.g. service-context calls such as multi-tenant health
+// checks). Callers should treat the rate-limit session id as optional in that case.
+var ErrUserContextNotConfigured = errors.New("user context not configured")
+
 type userSessionProvider struct {
 	seed []byte
 }
@@ -57,7 +62,7 @@ func (p *userSessionProvider) GetSessionId(ctx context.Context) (string, error) 
 
 	currentUser, ok := azusercontext.GetCurrentUser(ctx)
 	if !ok || currentUser.User == nil {
-		return "", fmt.Errorf("user context not configured")
+		return "", ErrUserContextNotConfigured
 	}
 
 	hash := sha256.New()

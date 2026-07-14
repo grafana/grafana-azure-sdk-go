@@ -28,7 +28,7 @@ func TestSessionProvider(t *testing.T) {
 		sessionProvider, err := newSessionProvider()
 		require.NoError(t, err)
 		sessionId, err := sessionProvider.GetSessionId(context.Background())
-		require.Error(t, err)
+		require.ErrorIs(t, err, ErrUserContextNotConfigured)
 		require.Empty(t, sessionId)
 	})
 
@@ -39,7 +39,7 @@ func TestSessionProvider(t *testing.T) {
 			IdToken: "FAKE_ID_TOKEN",
 		})
 		sessionId, err := sessionProvider.GetSessionId(usrctx)
-		require.Error(t, err)
+		require.ErrorIs(t, err, ErrUserContextNotConfigured)
 		require.Empty(t, sessionId)
 	})
 }

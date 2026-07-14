@@ -70,9 +70,14 @@ func applyAzureAuth(tokenProvider aztokenprovider.AzureTokenProvider, sessionPro
 
 		if sessionProvider != nil {
 			sessionId, err := sessionProvider.GetSessionId(reqContext)
-			if err != nil {
+			switch {
+			case errors.Is(err, ErrUserContextNotConfigured):
+				// No user in context (e.g. service-context calls such as multi-tenant
+				// health checks). The rate-limit session id is optional metadata, so
+				// omit the header instead of failing the request.
+			case err != nil:
 				return nil, fmt.Errorf("failed to obtain user session: %w", err)
-			} else if sessionId != "" {
+			case sessionId != "":
 				req.Header.Set("x-ms-ratelimit-id", sessionId)
 			}
 		}
