@@ -43,11 +43,11 @@ func AzureMiddleware(authOpts *AuthOptions, credentials azcredentials.AzureCrede
 func applyAzureAuth(tokenProvider aztokenprovider.AzureTokenProvider, sessionProvider *userSessionProvider,
 	scopes []string, endpoints *azendpoint.EndpointAllowlist, scopeResolver ScopeResolver, next http.RoundTripper) http.RoundTripper {
 	return httpclient.RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
-		requestScopes := scopes
 		if req == nil {
 			return nil, fmt.Errorf("request is nil")
 		}
 		reqContext := req.Context()
+		requestScopes := scopes
 
 		if endpoints != nil {
 			endpoint := azendpoint.Endpoint(*req.URL)
@@ -61,10 +61,13 @@ func applyAzureAuth(tokenProvider aztokenprovider.AzureTokenProvider, sessionPro
 
 		if scopeResolver != nil {
 			dynamicScopes, err := scopeResolver(reqContext, req)
-			if err == nil && len(dynamicScopes) > 0 {
+			switch {
+			case err != nil:
+				backend.Logger.FromContext(reqContext).Warn("failed to resolve scopes, falling back to default scopes", "error", err)
+			case len(dynamicScopes) == 0:
+				backend.Logger.FromContext(reqContext).Warn("scope resolver returned no scopes, falling back to default scopes")
+			default:
 				requestScopes = dynamicScopes
-			} else {
-				backend.Logger.FromContext(reqContext).Error("failed to resolve scopes, falling back to default scopes", "error", err)
 			}
 		}
 

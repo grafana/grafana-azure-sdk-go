@@ -13,7 +13,9 @@ import (
 
 type AzureTokenProviderFactory = func(*azsettings.AzureSettings, azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error)
 
-// azhttpclient/options.go
+// ScopeResolver resolves the token scopes to use for a specific request. It is
+// invoked per request, allowing callers to derive scopes dynamically.
+// Returning an error or an empty slice causes the middleware to fall back to the statically configured scopes.
 type ScopeResolver func(ctx context.Context, req *http.Request) ([]string, error)
 
 func (opts *AuthOptions) SetScopeResolver(fn ScopeResolver) { opts.scopeResolver = fn }
