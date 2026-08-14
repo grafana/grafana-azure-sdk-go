@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
@@ -247,6 +249,54 @@ func TestAzureMiddleware(t *testing.T) {
 			require.Error(t, err)
 			assert.EqualError(t, err, "invalid Azure configuration: scopes not configured")
 		})
+
+		t.Run("should resolve scopes per-request under concurrency", func(t *testing.T) {
+			// Resolver derives scopes from the request host so each cluster gets
+			// its own scope set.
+			authOpts := NewAuthOptions(azureSettings)
+			authOpts.Scopes([]string{"https://default.example.org/.default"})
+			authOpts.SetScopeResolver(func(_ context.Context, req *http.Request) ([]string, error) {
+				return []string{fmt.Sprintf("https://%s/.default", req.URL.Host)}, nil
+			})
+			authOpts.AddTokenProvider(azureAuthCustom, func(_ *azsettings.AzureSettings, _ azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error) {
+
+				return &scopeEchoTokenProvider{}, nil
+			})
+
+			middleware := AzureMiddleware(authOpts, &customCredentials{}).CreateMiddleware(clientOpts, &authEchoRoundTripper{})
+
+			hosts := []string{"clustera.kusto.windows.net", "clusterb.kusto.windows.net"}
+			const workers = 50
+
+			var wg sync.WaitGroup
+			errs := make(chan error, workers)
+			for i := 0; i < workers; i++ {
+				host := hosts[i%len(hosts)]
+				wg.Add(1)
+				go func(host string) {
+					defer wg.Done()
+					req, err := http.NewRequest("GET", "https://"+host, nil)
+					if err != nil {
+						errs <- err
+						return
+					}
+					resp, err := middleware.RoundTrip(req)
+					if err != nil {
+						errs <- err
+						return
+					}
+					want := fmt.Sprintf("Bearer https://%s/.default", host)
+					if got := resp.Header.Get("X-Echo-Authorization"); got != want {
+						errs <- fmt.Errorf("host %s: got %q, want %q", host, got, want)
+					}
+				}(host)
+			}
+			wg.Wait()
+			close(errs)
+			for err := range errs {
+				require.NoError(t, err)
+			}
+		})
 	})
 }
 
@@ -296,4 +346,22 @@ type testRoundTripper struct {
 func (rt *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	rt.lastReq = req
 	return &http.Response{Status: "200 OK", StatusCode: 200}, nil
+}
+
+// scopeEchoTokenProvider returns the requested scopes as the token, allowing
+// tests to assert which scopes a request was authenticated with. Stateless - safe for concurrent use.
+type scopeEchoTokenProvider struct{}
+
+func (provider *scopeEchoTokenProvider) GetAccessToken(_ context.Context, scopes []string) (string, error) {
+	return strings.Join(scopes, " "), nil
+}
+
+// authEchoRoundTripper echoes the received Authorization header back on the
+// response so concurrent callers can verify their own request in isolation. Stateless - safe for concurrent use.
+type authEchoRoundTripper struct{}
+
+func (rt *authEchoRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	header := http.Header{}
+	header.Set("X-Echo-Authorization", req.Header.Get("Authorization"))
+	return &http.Response{Status: "200 OK", StatusCode: 200, Header: header}, nil
 }

@@ -24,5 +24,4 @@ jobs:
       - name: Download dependencies
         run: go mod download
       - name: Test with the Go CLI
-        run: go test -mod=readonly ./...
-
+        run: go test -mod=readonly -race ./...
