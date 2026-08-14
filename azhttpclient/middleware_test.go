@@ -2,6 +2,7 @@ package azhttpclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -181,6 +182,72 @@ func TestAzureMiddleware(t *testing.T) {
 			assert.Empty(t, capture.lastReq.Header.Get("x-ms-ratelimit-id"))
 		})
 	})
+
+	t.Run("given scope resolver configured", func(t *testing.T) {
+		t.Run("should use dynamic scopes when resolver returns scopes", func(t *testing.T) {
+			captureProvider := &capturingTokenProvider{}
+			authOpts := NewAuthOptions(azureSettings)
+			authOpts.Scopes([]string{"https://default.example.org/.default"})
+			authOpts.SetScopeResolver(func(_ context.Context, _ *http.Request) ([]string, error) {
+				return []string{"https://dynamic.example.org/.default"}, nil
+			})
+			authOpts.AddTokenProvider(azureAuthCustom, func(_ *azsettings.AzureSettings, _ azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error) {
+				return captureProvider, nil
+			})
+
+			capture := &testRoundTripper{}
+			middleware := AzureMiddleware(authOpts, &customCredentials{}).CreateMiddleware(clientOpts, capture)
+			req, err := http.NewRequest("GET", "https://testendpoint.microsoft.com", nil)
+			require.NoError(t, err)
+
+			resp, err := middleware.RoundTrip(req)
+			require.NoError(t, err)
+			assert.Equal(t, 200, resp.StatusCode)
+			assert.Equal(t, []string{"https://dynamic.example.org/.default"}, captureProvider.LastScopes)
+		})
+
+		t.Run("should fall back to default scopes when resolver returns error", func(t *testing.T) {
+			captureProvider := &capturingTokenProvider{}
+			authOpts := NewAuthOptions(azureSettings)
+			authOpts.Scopes([]string{"https://default.example.org/.default"})
+			authOpts.SetScopeResolver(func(_ context.Context, _ *http.Request) ([]string, error) {
+				return nil, errors.New("resolver failed")
+			})
+			authOpts.AddTokenProvider(azureAuthCustom, func(_ *azsettings.AzureSettings, _ azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error) {
+				return captureProvider, nil
+			})
+
+			capture := &testRoundTripper{}
+			middleware := AzureMiddleware(authOpts, &customCredentials{}).CreateMiddleware(clientOpts, capture)
+			req, err := http.NewRequest("GET", "https://testendpoint.microsoft.com", nil)
+			require.NoError(t, err)
+
+			resp, err := middleware.RoundTrip(req)
+			require.NoError(t, err)
+			assert.Equal(t, 200, resp.StatusCode)
+			assert.Equal(t, []string{"https://default.example.org/.default"}, captureProvider.LastScopes)
+		})
+
+		t.Run("should return configuration error when resolver returns no scopes and defaults are empty", func(t *testing.T) {
+			captureProvider := &capturingTokenProvider{}
+			authOpts := NewAuthOptions(azureSettings)
+			authOpts.SetScopeResolver(func(_ context.Context, _ *http.Request) ([]string, error) {
+				return nil, nil
+			})
+			authOpts.AddTokenProvider(azureAuthCustom, func(_ *azsettings.AzureSettings, _ azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error) {
+				return captureProvider, nil
+			})
+
+			capture := &testRoundTripper{}
+			middleware := AzureMiddleware(authOpts, &customCredentials{}).CreateMiddleware(clientOpts, capture)
+			req, err := http.NewRequest("GET", "https://testendpoint.microsoft.com", nil)
+			require.NoError(t, err)
+
+			_, err = middleware.RoundTrip(req)
+			require.Error(t, err)
+			assert.EqualError(t, err, "invalid Azure configuration: scopes not configured")
+		})
+	})
 }
 
 const (
@@ -210,6 +277,15 @@ func (provider *customTokenProvider) GetAccessToken(ctx context.Context, scopes 
 
 	provider.Called = true
 
+	return "FAKE-ACCESS-TOKEN", nil
+}
+
+type capturingTokenProvider struct {
+	LastScopes []string
+}
+
+func (provider *capturingTokenProvider) GetAccessToken(_ context.Context, scopes []string) (string, error) {
+	provider.LastScopes = append([]string{}, scopes...)
 	return "FAKE-ACCESS-TOKEN", nil
 }
 

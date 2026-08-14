@@ -1,6 +1,9 @@
 package azhttpclient
 
 import (
+	"context"
+	"net/http"
+
 	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azhttpclient/internal/azendpoint"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
@@ -10,6 +13,11 @@ import (
 
 type AzureTokenProviderFactory = func(*azsettings.AzureSettings, azcredentials.AzureCredentials) (aztokenprovider.AzureTokenProvider, error)
 
+// azhttpclient/options.go
+type ScopeResolver func(ctx context.Context, req *http.Request) ([]string, error)
+
+func (opts *AuthOptions) SetScopeResolver(fn ScopeResolver) { opts.scopeResolver = fn }
+
 type AuthOptions struct {
 	settings              *azsettings.AzureSettings
 	endpoints             *azendpoint.EndpointAllowlist
@@ -17,10 +25,11 @@ type AuthOptions struct {
 	userIdentitySupported bool
 	rateLimitSession      bool
 	customProviders       map[string]AzureTokenProviderFactory
+	scopeResolver         ScopeResolver
 }
 
 func NewAuthOptions(settings *azsettings.AzureSettings) *AuthOptions {
-	return &AuthOptions{settings: settings, scopes: []string{}}
+	return &AuthOptions{settings: settings, scopes: []string{}, scopeResolver: nil}
 }
 
 func AddAzureAuthentication(clientOpts *sdkhttpclient.Options, authOpts *AuthOptions, credentials azcredentials.AzureCredentials) {
