@@ -73,6 +73,18 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			tokenCache:     azureTokenCache,
 			tokenRetriever: tokenRetriever,
 		}, nil
+	case *azcredentials.AzureFederatedIdentityCredentials:
+		if !settings.ManagedIdentityEnabled {
+			return nil, fmt.Errorf("managed identity authentication is not enabled in Grafana config (required as source identity for federated identity)")
+		}
+		tokenRetriever, err := getFederatedIdentityTokenRetriever(settings, c)
+		if err != nil {
+			return nil, err
+		}
+		return &serviceTokenProvider{
+			tokenCache:     azureTokenCache,
+			tokenRetriever: tokenRetriever,
+		}, nil
 	case *azcredentials.AadCurrentUserCredentials:
 		if !userIdentitySupported {
 			err = fmt.Errorf("user identity authentication is not supported by this datasource")

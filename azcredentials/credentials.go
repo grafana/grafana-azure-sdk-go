@@ -8,6 +8,7 @@ const (
 	AzureAuthClientCertificate        = "clientcertificate"
 	AzureAuthClientSecretObo          = "clientsecret-obo"
 	AzureAuthEntraPasswordCredentials = "ad-password"
+	AzureAuthFederatedIdentity        = "federatedidentity"
 )
 
 type AzureCredentials interface {
@@ -94,4 +95,17 @@ func (credentials *AzureClientSecretOboCredentials) AzureAuthType() string {
 
 func (credentials *AzureEntraPasswordCredentials) AzureAuthType() string {
 	return AzureAuthEntraPasswordCredentials
+}
+
+// AzureFederatedIdentityCredentials "Federated Identity" cross-tenant service identity credentials
+// using a managed identity assertion to obtain a token in a target tenant.
+type AzureFederatedIdentityCredentials struct {
+	SourceClientId              string
+	TargetTenantId              string
+	TargetClientId              string
+	FederatedCredentialAudience string
+}
+
+func (credentials *AzureFederatedIdentityCredentials) AzureAuthType() string {
+	return AzureAuthFederatedIdentity
 }
