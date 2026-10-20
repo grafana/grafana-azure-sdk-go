@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
@@ -117,6 +118,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 		return &userTokenProvider{
 			tokenCache:        azureTokenCache,
 			client:            client,
+			clientId:          tokenEndpoint.ClientId,
 			usernameAssertion: tokenEndpoint.UsernameAssertion,
 			tokenRetriever:    tokenRetriever,
 		}, nil
@@ -151,6 +153,7 @@ func (provider *serviceTokenProvider) GetAccessToken(ctx context.Context, scopes
 type userTokenProvider struct {
 	tokenCache        ConcurrentTokenCache
 	client            TokenClient
+	clientId          string
 	usernameAssertion bool
 	tokenRetriever    TokenRetriever
 }
@@ -243,16 +246,16 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 			username: username,
 		}
 	} else {
-		idToken := azureUser.IdToken
-		if idToken == "" {
-			err := fmt.Errorf("user identity authentication not possible because there's no ID token associated with the Grafana user")
+		assertion, kind, err := provider.chooseAssertion(ctx, azureUser)
+		if err != nil {
 			return "", err
 		}
 
 		tokenRetriever = &onBehalfOfTokenRetriever{
-			client:  provider.client,
-			userId:  username,
-			idToken: idToken,
+			client:        provider.client,
+			userId:        username,
+			assertion:     assertion,
+			assertionKind: kind,
 		}
 	}
 
@@ -271,4 +274,72 @@ func extractUsername(userCtx azusercontext.CurrentUserContext) (string, error) {
 	} else {
 		return "", errors.New("request not associated with a Grafana user")
 	}
+}
+
+// assertionOverrideEnv forces which token is sent as the on-behalf-of assertion ("idtoken" or "accesstoken").
+// Set it with azure_obo_assertion_override in the plugin's [plugin.<id>] ini section, since Grafana only forwards
+// GF_PLUGIN_* settings to plugins. TEMPORARY, for validating the access-token assertion against Entra (Phase 0);
+// remove before release.
+const assertionOverrideEnv = "GF_PLUGIN_AZURE_OBO_ASSERTION_OVERRIDE"
+
+// chooseAssertion picks the user's token to send as the on-behalf-of assertion. Microsoft's OBO flow expects an
+// access token issued for this app, so that's used when its audience is this app's client ID. Otherwise, e.g. when
+// login only requested Microsoft Graph scopes, it falls back to the ID token, which needs the app registration to
+// allow ID tokens through the implicit/hybrid flow.
+func (provider *userTokenProvider) chooseAssertion(ctx context.Context, azureUser azusercontext.CurrentUserContext) (string, assertionKind, error) {
+	logger := backend.Logger.FromContext(ctx)
+	claims := unverifiedClaims(azureUser.AccessToken)
+	aud, _ := claims["aud"].(string)
+	logArgs := []any{"accessTokenAud", aud, "accessTokenVer", claims["ver"], "accessTokenScp", claims["scp"], "clientId", provider.clientId}
+
+	kind := assertionIdToken
+	reason := "access token audience is not this app"
+	switch {
+	case os.Getenv(assertionOverrideEnv) != "":
+		kind = assertionKind(os.Getenv(assertionOverrideEnv))
+		reason = "forced by " + assertionOverrideEnv
+	case azureUser.AccessToken == "":
+		reason = "no access token"
+	case provider.isOwnAudience(aud):
+		kind = assertionAccessToken
+		reason = "access token audience is this app"
+	}
+
+	var assertion string
+	switch kind {
+	case assertionAccessToken:
+		assertion = azureUser.AccessToken
+	case assertionIdToken:
+		assertion = azureUser.IdToken
+	default:
+		return "", "", fmt.Errorf("invalid %s value '%s'", assertionOverrideEnv, kind)
+	}
+
+	logger.Debug("Chose on-behalf-of assertion", append([]any{"assertion", kind, "reason", reason}, logArgs...)...)
+
+	if assertion == "" {
+		name := "ID token"
+		if kind == assertionAccessToken {
+			name = "access token"
+		}
+		return "", "", fmt.Errorf("user identity authentication not possible because there's no %s associated with the Grafana user", name)
+	}
+	return assertion, kind, nil
+}
+
+func (provider *userTokenProvider) isOwnAudience(aud string) bool {
+	return provider.clientId != "" && (aud == provider.clientId || aud == "api://"+provider.clientId)
+}
+
+// unverifiedClaims reads a JWT's claims without checking its signature. Only for choosing which token to send;
+// Entra validates the token itself.
+func unverifiedClaims(token string) jwt.MapClaims {
+	claims := jwt.MapClaims{}
+	if token == "" {
+		return claims
+	}
+	if _, _, err := jwt.NewParser().ParseUnverified(token, claims); err != nil {
+		return jwt.MapClaims{}
+	}
+	return claims
 }

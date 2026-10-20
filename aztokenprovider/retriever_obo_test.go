@@ -15,14 +15,14 @@ func Test_OBORetrieverGetExpiry(t *testing.T) {
 
 		require.Equal(t, expiry, &time.Time{})
 	})
-	t.Run("returns 0 time value if idToken is empty", func(t *testing.T) {
-		retriever := onBehalfOfTokenRetriever{idToken: ""}
+	t.Run("returns 0 time value if assertion is empty", func(t *testing.T) {
+		retriever := onBehalfOfTokenRetriever{assertion: ""}
 		expiry := retriever.GetExpiry()
 
 		require.Equal(t, expiry, &time.Time{})
 	})
 	t.Run("returns 0 time value if it is not possible to parse JWT", func(t *testing.T) {
-		retriever := onBehalfOfTokenRetriever{idToken: "fake-string"}
+		retriever := onBehalfOfTokenRetriever{assertion: "fake-string"}
 		expiry := retriever.GetExpiry()
 
 		require.Equal(t, expiry, &time.Time{})
@@ -37,7 +37,7 @@ func Test_OBORetrieverGetExpiry(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		retriever := onBehalfOfTokenRetriever{idToken: tokenString}
+		retriever := onBehalfOfTokenRetriever{assertion: tokenString}
 		expiry := retriever.GetExpiry()
 
 		require.Equal(t, expiry, &time.Time{})
@@ -53,7 +53,7 @@ func Test_OBORetrieverGetExpiry(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		retriever := onBehalfOfTokenRetriever{idToken: tokenString}
+		retriever := onBehalfOfTokenRetriever{assertion: tokenString}
 		expiry := retriever.GetExpiry()
 
 		require.Equal(t, expiry, &time.Time{})
@@ -71,7 +71,7 @@ func Test_OBORetrieverGetExpiry(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		retriever := onBehalfOfTokenRetriever{idToken: tokenString}
+		retriever := onBehalfOfTokenRetriever{assertion: tokenString}
 		expiry := retriever.GetExpiry()
 
 		require.Equal(t, expiry, &expiryTime)
