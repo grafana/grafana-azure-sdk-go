@@ -265,7 +265,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 	if err != nil {
 		err = fmt.Errorf("unable to acquire access token for user '%s': %w", username, err)
 		if kind == assertionIdToken && strings.Contains(err.Error(), "AADSTS240002") {
-			err = fmt.Errorf("%w (%s)", err, idTokenAssertionHint)
+			err = fmt.Errorf("%w (%s)", err, idTokenAssertionHint(provider.clientId))
 		}
 		return "", err
 	}
@@ -282,10 +282,16 @@ func extractUsername(userCtx azusercontext.CurrentUserContext) (string, error) {
 }
 
 // idTokenAssertionHint explains AADSTS240002, which Entra returns when it rejects the ID token as an on-behalf-of
-// assertion because the app registration doesn't issue ID tokens through the implicit/hybrid flow.
-const idTokenAssertionHint = "the ID token was used as the on-behalf-of assertion because the user's access token isn't " +
-	"for this app; either add the '<client-id>/.default' scope to the Grafana login scopes and sign in again, " +
-	"or enable ID tokens under implicit grant and hybrid flows in the app registration"
+// assertion because the app registration doesn't issue ID tokens through the implicit/hybrid flow. The fix is for
+// login to request this app's scope, so the access token can be sent instead.
+func idTokenAssertionHint(clientId string) string {
+	if clientId == "" {
+		clientId = "<client-id>"
+	}
+	return fmt.Sprintf("the ID token was used as the on-behalf-of assertion because the user's access token isn't for this app; "+
+		"a Grafana administrator should add the '%s/.default' scope to the Entra ID login scopes. "+
+		"If that scope has already been added, sign out of Grafana and sign in again", clientId)
+}
 
 // chooseAssertion picks the user's token to send as the on-behalf-of assertion. Microsoft's OBO flow expects an
 // access token issued for this app, so that's used when its audience is this app's client ID. Otherwise, e.g. when

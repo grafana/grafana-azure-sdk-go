@@ -106,7 +106,14 @@ func TestGetAccessToken_UserIdentity_AssertionHint(t *testing.T) {
 		provider := &userTokenProvider{clientId: testClientId, tokenCache: &erroringTokenCache{err: entraErr}}
 		_, err := provider.GetAccessToken(userCtx(""), scopes)
 		require.ErrorIs(t, err, entraErr)
-		require.ErrorContains(t, err, "add the '<client-id>/.default' scope to the Grafana login scopes")
+		require.ErrorContains(t, err, "add the '"+testClientId+"/.default' scope to the Entra ID login scopes")
+		require.ErrorContains(t, err, "sign out of Grafana and sign in again")
+	})
+
+	t.Run("falls back to a placeholder when the client ID isn't configured", func(t *testing.T) {
+		provider := &userTokenProvider{tokenCache: &erroringTokenCache{err: entraErr}}
+		_, err := provider.GetAccessToken(userCtx(""), scopes)
+		require.ErrorContains(t, err, "add the '<client-id>/.default' scope")
 	})
 
 	t.Run("doesn't add the hint for other errors", func(t *testing.T) {

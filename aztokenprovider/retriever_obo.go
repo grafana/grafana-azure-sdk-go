@@ -24,11 +24,7 @@ type onBehalfOfTokenRetriever struct {
 }
 
 func (r *onBehalfOfTokenRetriever) GetCacheKey(grafanaMultiTenantId string) string {
-	kind := r.assertionKind
-	if kind == "" {
-		kind = assertionIdToken
-	}
-	return fmt.Sprintf("currentuser|%s|%s|%s", kind, r.userId, grafanaMultiTenantId)
+	return fmt.Sprintf("currentuser|%s|%s|%s", r.assertionKind, r.userId, grafanaMultiTenantId)
 }
 
 func (r *onBehalfOfTokenRetriever) Init() error {
