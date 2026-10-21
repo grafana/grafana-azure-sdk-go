@@ -32,13 +32,16 @@ type httpAssertionProvider struct {
 	client      *http.Client
 }
 
-// stackHeader carries the stack this process says it serves. The assertion service
+// stackHeader carries the stack the request is for. The assertion service
 // ignores it unless the caller's credential is allowed to name its stack.
 const stackHeader = "X-Grafana-Stack"
 
 // NewHTTPAssertionProvider returns an AssertionProvider backed by the token
-// service at baseURL. callerToken identifies this process to the service, and
-// stackID (optional) names the stack it serves.
+// service at baseURL. callerToken identifies this process to the service.
+//
+// The stack sent with each request is the one Grafana reports in the request's plugin
+// context (see stackIDFromContext). stackID (optional) is only the fallback for when
+// Grafana reports none, for example a local or single-tenant Grafana.
 func NewHTTPAssertionProvider(baseURL, callerToken, stackID string, client *http.Client) (AssertionProvider, error) {
 	if baseURL == "" {
 		return nil, fmt.Errorf("workload identity assertion URL is not configured")
@@ -67,8 +70,12 @@ func (p *httpAssertionProvider) GetAssertion(ctx context.Context, tenantID, clie
 	if p.callerToken != "" {
 		req.Header.Set("Authorization", "Bearer "+p.callerToken)
 	}
-	if p.stackID != "" {
-		req.Header.Set(stackHeader, p.stackID)
+	stack := stackIDFromContext(ctx)
+	if stack == "" {
+		stack = p.stackID
+	}
+	if stack != "" {
+		req.Header.Set(stackHeader, stack)
 	}
 
 	resp, err := p.client.Do(req)

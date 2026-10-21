@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -250,4 +251,64 @@ func TestHTTPAssertionProvider_OmitsStackHeaderWhenUnset(t *testing.T) {
 	_, err = provider.GetAssertion(context.Background(), testTenantID, testClientID)
 	require.NoError(t, err)
 	assert.False(t, present, "an unset stack must not be sent as an empty header")
+}
+
+func contextWithNamespace(ns string) context.Context {
+	return backend.WithPluginContext(context.Background(), backend.PluginContext{Namespace: ns})
+}
+
+func TestStackIDFromContextOnlyAcceptsAStackNamespace(t *testing.T) {
+	for ns, want := range map[string]string{
+		"stacks-123": "123", "stacks-1": "1",
+		"": "", "default": "", "org-1": "", "hosted-grafana": "",
+		"stacks-": "", "stacks-12x": "", "stacks--1": "", "stacks-123/../x": "", "xstacks-123": "",
+	} {
+		assert.Equal(t, want, stackIDFromContext(contextWithNamespace(ns)), "namespace %q", ns)
+	}
+	assert.Equal(t, "", stackIDFromContext(context.Background()), "no plugin context at all")
+}
+
+func TestHTTPAssertionProvider_StackFromContext(t *testing.T) {
+	var stacks []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stacks = append(stacks, r.Header.Get(stackHeader))
+		_, _ = w.Write([]byte(`{"token":"t"}`))
+	}))
+	defer srv.Close()
+	provider, err := NewHTTPAssertionProvider(srv.URL, "caller-token", "configured", nil)
+	require.NoError(t, err)
+
+	for _, ctx := range []context.Context{
+		contextWithNamespace("stacks-42"), // Grafana's stack wins over the configured one
+		contextWithNamespace("default"),   // not a stack: fall back to the configured one
+		context.Background(),              // no plugin context: same
+	} {
+		_, err := provider.GetAssertion(ctx, testTenantID, testClientID)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, []string{"42", "configured", "configured"}, stacks)
+}
+
+// The stack has to survive the trip through azidentity and MSAL to the assertion callback, which is
+// the only place it is read.
+func TestWorkloadIdentityInMemory_StackFromContextReachesTheTokenService(t *testing.T) {
+	var stack string
+	tokensvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stack = r.Header.Get(stackHeader)
+		_ = json.NewEncoder(w).Encode(map[string]any{"token": "assertion-from-tokensvc"})
+	}))
+	defer tokensvc.Close()
+
+	settings := inMemorySettings(tokensvc.URL)
+	settings.WorkloadIdentitySettings.StackID = "configured"
+	retriever, err := getWorkloadIdentityInMemoryTokenRetriever(settings,
+		&azcredentials.AzureWorkloadIdentityCredentials{TenantId: testTenantID, ClientId: testClientID})
+	require.NoError(t, err)
+	r := retriever.(*workloadIdentityInMemoryTokenRetriever)
+	r.clientOptions = azcore.ClientOptions{Transport: &fakeEntra{}}
+	require.NoError(t, r.Init())
+
+	_, err = r.GetAccessToken(contextWithNamespace("stacks-77"), []string{"https://management.azure.com/.default"})
+	require.NoError(t, err)
+	assert.Equal(t, "77", stack)
 }

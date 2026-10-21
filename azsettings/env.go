@@ -29,9 +29,9 @@ const (
 	WorkloadIdentityInMemory             = "GFAZPL_WORKLOAD_IDENTITY_IN_MEMORY"
 	WorkloadIdentityAssertionURL         = "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_URL"
 	WorkloadIdentityAssertionCallerToken = "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_CALLER_TOKEN"
-	// WorkloadIdentityStackID names the Grafana stack this process serves. It is sent to the
-	// assertion service, which decides whether to honor it. Like the AWS external ID, it is
-	// meant to come from Grafana's own configuration.
+	// WorkloadIdentityStackID is the fallback stack for when Grafana reports none in the plugin
+	// context (its namespace is "stacks-<id>" on Grafana Cloud). It is sent to the assertion
+	// service, which decides whether to honor it.
 	WorkloadIdentityStackID = "GFAZPL_WORKLOAD_IDENTITY_STACK_ID"
 
 	UserIdentityEnabled                     = "GFAZPL_USER_IDENTITY_ENABLED"

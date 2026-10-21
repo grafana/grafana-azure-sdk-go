@@ -42,7 +42,9 @@ type WorkloadIdentitySettings struct {
 	AssertionURL string
 	// AssertionCallerToken authenticates this process to the assertion service.
 	AssertionCallerToken string
-	// StackID is the Grafana stack this process serves, sent to the assertion service.
+	// StackID is the Grafana stack this process serves, sent to the assertion service only when
+	// Grafana reports none in the request's plugin context (namespace "stacks-<id>"), for example
+	// on a local or single-tenant Grafana. A stack from Grafana always takes precedence.
 	StackID string
 }
 
