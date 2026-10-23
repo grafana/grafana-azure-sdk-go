@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/grafana/grafana-azure-sdk-go/v2/azusercontext"
@@ -350,4 +351,29 @@ func TestTokenClient_AllMethods_CookieForwarding(t *testing.T) {
 			assert.Equal(t, "auth=xyz789; session=test123", capturedRequest.Header.Get("Cookie"))
 		})
 	}
+}
+
+func TestTokenClient_OnBehalfOf_SendsAssertion(t *testing.T) {
+	var form url.Values
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseForm())
+		form = r.PostForm
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(tokenResponse{AccessToken: "test-token", ExpiresIn: 3600})
+	}))
+	defer server.Close()
+
+	client := &tokenClientImpl{
+		httpClient:           http.DefaultClient,
+		endpointUrl:          server.URL,
+		clientAuthentication: ClientSecret,
+		clientId:             "test-client-id",
+		clientSecret:         "test-client-secret",
+	}
+
+	_, err := client.OnBehalfOf(context.Background(), "test-assertion", []string{"https://management.azure.com/.default"})
+	require.NoError(t, err)
+	assert.Equal(t, "test-assertion", form.Get("assertion"))
+	assert.Equal(t, "on_behalf_of", form.Get("requested_token_use"))
+	assert.Equal(t, "urn:ietf:params:oauth:grant-type:jwt-bearer", form.Get("grant_type"))
 }

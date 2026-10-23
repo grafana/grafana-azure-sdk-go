@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
@@ -117,6 +118,7 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 		return &userTokenProvider{
 			tokenCache:        azureTokenCache,
 			client:            client,
+			clientId:          tokenEndpoint.ClientId,
 			usernameAssertion: tokenEndpoint.UsernameAssertion,
 			tokenRetriever:    tokenRetriever,
 		}, nil
@@ -151,6 +153,7 @@ func (provider *serviceTokenProvider) GetAccessToken(ctx context.Context, scopes
 type userTokenProvider struct {
 	tokenCache        ConcurrentTokenCache
 	client            TokenClient
+	clientId          string
 	usernameAssertion bool
 	tokenRetriever    TokenRetriever
 }
@@ -237,28 +240,33 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 	}
 
 	var tokenRetriever TokenRetriever
+	var kind assertionKind
 	if provider.usernameAssertion {
 		tokenRetriever = &usernameTokenRetriever{
 			client:   provider.client,
 			username: username,
 		}
 	} else {
-		idToken := azureUser.IdToken
-		if idToken == "" {
-			err := fmt.Errorf("user identity authentication not possible because there's no ID token associated with the Grafana user")
+		var assertion string
+		assertion, kind, err = provider.chooseAssertion(ctx, azureUser)
+		if err != nil {
 			return "", err
 		}
 
 		tokenRetriever = &onBehalfOfTokenRetriever{
-			client:  provider.client,
-			userId:  username,
-			idToken: idToken,
+			client:        provider.client,
+			userId:        username,
+			assertion:     assertion,
+			assertionKind: kind,
 		}
 	}
 
 	accessToken, err := provider.tokenCache.GetAccessToken(ctx, tokenRetriever, scopes)
 	if err != nil {
 		err = fmt.Errorf("unable to acquire access token for user '%s': %w", username, err)
+		if kind == assertionIdToken && strings.Contains(err.Error(), "AADSTS240002") {
+			err = fmt.Errorf("%w (%s)", err, idTokenAssertionHint(provider.clientId))
+		}
 		return "", err
 	}
 	return accessToken, nil
@@ -271,4 +279,59 @@ func extractUsername(userCtx azusercontext.CurrentUserContext) (string, error) {
 	} else {
 		return "", errors.New("request not associated with a Grafana user")
 	}
+}
+
+// idTokenAssertionHint explains AADSTS240002, which Entra returns when it rejects the ID token as an on-behalf-of
+// assertion because the app registration doesn't issue ID tokens through the implicit/hybrid flow. The fix is for
+// login to request this app's scope, so the access token can be sent instead.
+func idTokenAssertionHint(clientId string) string {
+	if clientId == "" {
+		clientId = "<client-id>"
+	}
+	return fmt.Sprintf("the ID token was used as the on-behalf-of assertion because the user's access token isn't for this app; "+
+		"a Grafana administrator should add the '%s/.default' scope to the Entra ID login scopes. "+
+		"If that scope has already been added, sign out of Grafana and sign in again", clientId)
+}
+
+// chooseAssertion picks the user's token to send as the on-behalf-of assertion. Microsoft's OBO flow expects an
+// access token issued for this app, so that's used when its audience is this app's client ID. Otherwise, e.g. when
+// login only requested Microsoft Graph scopes, it falls back to the ID token, which needs the app registration to
+// allow ID tokens through the implicit/hybrid flow.
+func (provider *userTokenProvider) chooseAssertion(ctx context.Context, azureUser azusercontext.CurrentUserContext) (string, assertionKind, error) {
+	claims := unverifiedClaims(azureUser.AccessToken)
+	aud, _ := claims["aud"].(string)
+
+	kind, assertion, reason := assertionIdToken, azureUser.IdToken, "access token audience is not this app"
+	switch {
+	case azureUser.AccessToken == "":
+		reason = "no access token"
+	case provider.isOwnAudience(aud):
+		kind, assertion, reason = assertionAccessToken, azureUser.AccessToken, "access token audience is this app"
+	}
+
+	backend.Logger.FromContext(ctx).Debug("Chose on-behalf-of assertion", "assertion", kind, "reason", reason,
+		"accessTokenAud", aud, "accessTokenVer", claims["ver"], "accessTokenScp", claims["scp"], "clientId", provider.clientId)
+
+	if assertion == "" {
+		return "", "", fmt.Errorf("user identity authentication not possible because there's no ID token associated with the Grafana user, "+
+			"and the access token can't be used instead (%s, audience '%s')", reason, aud)
+	}
+	return assertion, kind, nil
+}
+
+func (provider *userTokenProvider) isOwnAudience(aud string) bool {
+	return provider.clientId != "" && (aud == provider.clientId || aud == "api://"+provider.clientId)
+}
+
+// unverifiedClaims reads a JWT's claims without checking its signature. Only for choosing which token to send;
+// Entra validates the token itself.
+func unverifiedClaims(token string) jwt.MapClaims {
+	claims := jwt.MapClaims{}
+	if token == "" {
+		return claims
+	}
+	if _, _, err := jwt.NewParser().ParseUnverified(token, claims); err != nil {
+		return jwt.MapClaims{}
+	}
+	return claims
 }
