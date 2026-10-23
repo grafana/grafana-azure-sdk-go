@@ -20,6 +20,20 @@ const (
 	WorkloadIdentityClientID  = "GFAZPL_WORKLOAD_IDENTITY_CLIENT_ID"
 	WorkloadIdentityTokenFile = "GFAZPL_WORKLOAD_IDENTITY_TOKEN_FILE"
 
+	// WorkloadIdentityInMemoryFeatureToggle is the Grafana feature toggle that
+	// switches workload identity from reading a token file to requesting client
+	// assertions in memory. Off by default.
+	WorkloadIdentityInMemoryFeatureToggle = "workloadIdentityInMemory"
+	// WorkloadIdentityInMemory is the environment equivalent of the toggle, for
+	// processes that are not given Grafana's feature toggles.
+	WorkloadIdentityInMemory             = "GFAZPL_WORKLOAD_IDENTITY_IN_MEMORY"
+	WorkloadIdentityAssertionURL         = "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_URL"
+	WorkloadIdentityAssertionCallerToken = "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_CALLER_TOKEN"
+	// WorkloadIdentityStackID is the fallback stack for when Grafana reports none in the plugin
+	// context (its namespace is "stacks-<id>" on Grafana Cloud). It is sent to the assertion
+	// service, which decides whether to honor it.
+	WorkloadIdentityStackID = "GFAZPL_WORKLOAD_IDENTITY_STACK_ID"
+
 	UserIdentityEnabled                     = "GFAZPL_USER_IDENTITY_ENABLED"
 	UserIdentityTokenURL                    = "GFAZPL_USER_IDENTITY_TOKEN_URL"
 	UserIdentityClientAuthentication        = "GFAZPL_USER_IDENTITY_CLIENT_AUTHENTICATION"
@@ -78,6 +92,15 @@ func ReadFromEnv() (*AzureSettings, error) {
 		wiSettings.TenantId = envutil.GetOrDefault(WorkloadIdentityTenantID, "")
 		wiSettings.ClientId = envutil.GetOrDefault(WorkloadIdentityClientID, "")
 		wiSettings.TokenFile = envutil.GetOrDefault(WorkloadIdentityTokenFile, "")
+		inMemory, err := envutil.GetBoolOrDefault(WorkloadIdentityInMemory, false)
+		if err != nil {
+			err = fmt.Errorf("invalid Azure configuration: %w", err)
+			return nil, err
+		}
+		wiSettings.InMemory = inMemory
+		wiSettings.AssertionURL = envutil.GetOrDefault(WorkloadIdentityAssertionURL, "")
+		wiSettings.AssertionCallerToken = envutil.GetOrDefault(WorkloadIdentityAssertionCallerToken, "")
+		wiSettings.StackID = envutil.GetOrDefault(WorkloadIdentityStackID, "")
 		azureSettings.WorkloadIdentitySettings = wiSettings
 	}
 
