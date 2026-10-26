@@ -63,8 +63,9 @@ func NewHTTPAssertionProvider(baseURL, callerToken, stackID string, client *http
 }
 
 // validateAssertionURL requires https, because the caller token and the returned
-// assertion are credentials. Plain http is accepted only for a loopback host, for
-// local development. The assertion service is hosted over https today; if that
+// assertion are credentials. Plain http is accepted only for local development:
+// a loopback host, or host.docker.internal, which is how a container reaches the
+// machine it runs on. The assertion service is hosted over https today; if that
 // ever changes, this is the place to relax the rule.
 func validateAssertionURL(raw string) error {
 	u, err := url.Parse(raw)
@@ -78,11 +79,11 @@ func validateAssertionURL(raw string) error {
 	case "https":
 		return nil
 	case "http":
-		if host := u.Hostname(); host == "localhost" || net.ParseIP(host).IsLoopback() {
+		if host := u.Hostname(); host == "localhost" || host == "host.docker.internal" || net.ParseIP(host).IsLoopback() {
 			return nil
 		}
 	}
-	return fmt.Errorf("workload identity assertion URL must use https (http is only allowed for localhost)")
+	return fmt.Errorf("workload identity assertion URL must use https (http is only allowed for localhost and host.docker.internal)")
 }
 
 func (p *httpAssertionProvider) GetAssertion(ctx context.Context, tenantID, clientID string) (string, error) {

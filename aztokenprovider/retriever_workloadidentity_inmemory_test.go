@@ -94,7 +94,7 @@ func TestNewWorkloadIdentityTokenRetriever_Selection(t *testing.T) {
 			_, err := newWorkloadIdentityTokenRetriever(inMemorySettings(u), credentials)
 			require.Error(t, err, u)
 		}
-		for _, u := range []string{"https://tokensvc", "http://localhost:8080", "http://127.0.0.1:8080", "http://[::1]:8080"} {
+		for _, u := range []string{"https://tokensvc", "http://localhost:8080", "http://127.0.0.1:8080", "http://[::1]:8080", "http://host.docker.internal:8081"} {
 			_, err := newWorkloadIdentityTokenRetriever(inMemorySettings(u), credentials)
 			require.NoError(t, err, u)
 		}
