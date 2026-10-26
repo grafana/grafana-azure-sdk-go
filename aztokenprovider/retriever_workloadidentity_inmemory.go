@@ -25,6 +25,14 @@ type workloadIdentityInMemoryTokenRetriever struct {
 	clientId string
 	provider AssertionProvider
 
+	// assertionURL and callerTokenHash identify the assertion service
+	// configuration the retriever was built with. They are part of the cache key
+	// so that rotating either yields a new retriever instead of the cached one.
+	// Only a hash of the caller token is kept, so the key never holds the secret.
+	assertionURL    string
+	callerTokenHash string
+	stackID         string
+
 	// clientOptions lets tests replace the HTTP transport.
 	clientOptions azcore.ClientOptions
 	credential    azcore.TokenCredential
@@ -71,11 +79,15 @@ func getWorkloadIdentityInMemoryTokenRetriever(settings *azsettings.AzureSetting
 		tenantId: tenantId,
 		clientId: clientId,
 		provider: provider,
+
+		assertionURL:    wiSettings.AssertionURL,
+		callerTokenHash: hashSecret(wiSettings.AssertionCallerToken),
+		stackID:         wiSettings.StackID,
 	}, nil
 }
 
 func (c *workloadIdentityInMemoryTokenRetriever) GetCacheKey(grafanaMultiTenantId string) string {
-	return fmt.Sprintf("azure|wi-mem|%s|%s|%s", c.tenantId, c.clientId, grafanaMultiTenantId)
+	return fmt.Sprintf("azure|wi-mem|%s|%s|%s|%s|%s|%s", c.tenantId, c.clientId, c.assertionURL, c.callerTokenHash, c.stackID, grafanaMultiTenantId)
 }
 
 func (c *workloadIdentityInMemoryTokenRetriever) Init() error {

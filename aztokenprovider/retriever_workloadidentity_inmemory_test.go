@@ -62,7 +62,23 @@ func TestNewWorkloadIdentityTokenRetriever_Selection(t *testing.T) {
 		retriever, err := newWorkloadIdentityTokenRetriever(inMemorySettings("http://tokensvc"), credentials)
 		require.NoError(t, err)
 		require.IsType(t, &workloadIdentityInMemoryTokenRetriever{}, retriever)
-		assert.Equal(t, "azure|wi-mem|"+testTenantID+"|"+testClientID+"|mt", retriever.GetCacheKey("mt"))
+		assert.Contains(t, retriever.GetCacheKey("mt"), "azure|wi-mem|"+testTenantID+"|"+testClientID+"|http://tokensvc|")
+		assert.True(t, strings.HasSuffix(retriever.GetCacheKey("mt"), "|mt"))
+	})
+
+	t.Run("in-memory cache key changes when the assertion URL or caller token is rotated", func(t *testing.T) {
+		build := func(url, token string) string {
+			settings := inMemorySettings(url)
+			settings.WorkloadIdentitySettings.AssertionCallerToken = token
+			r, err := newWorkloadIdentityTokenRetriever(settings, credentials)
+			require.NoError(t, err)
+			return r.GetCacheKey("mt")
+		}
+		base := build("http://tokensvc", "token-1")
+		assert.Equal(t, base, build("http://tokensvc", "token-1"))
+		assert.NotEqual(t, base, build("http://other", "token-1"))
+		assert.NotEqual(t, base, build("http://tokensvc", "token-2"))
+		assert.NotContains(t, base, "token-1")
 	})
 
 	t.Run("in-memory cache keys never collide with token file cache keys", func(t *testing.T) {
