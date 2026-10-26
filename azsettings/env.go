@@ -195,6 +195,18 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 				if wiSettings.TokenFile != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityTokenFile, wiSettings.TokenFile))
 				}
+				if wiSettings.InMemory {
+					envs = append(envs, fmt.Sprintf("%s=true", WorkloadIdentityInMemory))
+				}
+				if wiSettings.AssertionURL != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityAssertionURL, wiSettings.AssertionURL))
+				}
+				if wiSettings.AssertionCallerToken != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityAssertionCallerToken, wiSettings.AssertionCallerToken))
+				}
+				if wiSettings.StackID != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityStackID, wiSettings.StackID))
+				}
 			}
 		}
 
