@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
+	"github.com/grafana/grafana-plugin-sdk-go/config"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -67,6 +69,17 @@ func (c *tokenCacheImpl) getEntryFor(ctx context.Context, credential TokenRetrie
 	var entry interface{}
 	var ok bool
 	tid := returnGrafanaMultiTenantId(ctx)
+	inMemoryEnabled := config.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled(azsettings.WorkloadIdentityInMemoryFeatureToggle)
+	if tid == "" && inMemoryEnabled {
+		// The tenant ID is not always set. Tenant and client IDs are not secret, so
+		// without it two stacks sharing them would share one cached token. Falling
+		// back to the stack Grafana reports keeps their entries apart.
+		//
+		// This gap is not specific to workload identity in memory. It is only behind
+		// that feature toggle to limit the blast radius: once it is confirmed to work
+		// end to end without breaking users, it can be enabled for every credential type.
+		tid = stackIDFromContext(ctx)
+	}
 
 	key := credential.GetCacheKey(tid)
 
