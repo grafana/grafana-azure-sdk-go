@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -46,6 +48,9 @@ func NewHTTPAssertionProvider(baseURL, callerToken, stackID string, client *http
 	if baseURL == "" {
 		return nil, fmt.Errorf("workload identity assertion URL is not configured")
 	}
+	if err := validateAssertionURL(baseURL); err != nil {
+		return nil, err
+	}
 	if client == nil {
 		client = &http.Client{Timeout: 10 * time.Second}
 	}
@@ -55,6 +60,29 @@ func NewHTTPAssertionProvider(baseURL, callerToken, stackID string, client *http
 		stackID:     stackID,
 		client:      client,
 	}, nil
+}
+
+// validateAssertionURL requires https, because the caller token and the returned
+// assertion are credentials. Plain http is accepted only for a loopback host, for
+// local development. The assertion service is hosted over https today; if that
+// ever changes, this is the place to relax the rule.
+func validateAssertionURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid workload identity assertion URL: %w", err)
+	}
+	if u.Hostname() == "" {
+		return fmt.Errorf("invalid workload identity assertion URL: missing host")
+	}
+	switch u.Scheme {
+	case "https":
+		return nil
+	case "http":
+		if host := u.Hostname(); host == "localhost" || net.ParseIP(host).IsLoopback() {
+			return nil
+		}
+	}
+	return fmt.Errorf("workload identity assertion URL must use https (http is only allowed for localhost)")
 }
 
 func (p *httpAssertionProvider) GetAssertion(ctx context.Context, tenantID, clientID string) (string, error) {

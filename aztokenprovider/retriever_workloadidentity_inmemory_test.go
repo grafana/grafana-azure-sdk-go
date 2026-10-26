@@ -43,7 +43,7 @@ func TestNewWorkloadIdentityTokenRetriever_Selection(t *testing.T) {
 			WorkloadIdentitySettings: &azsettings.WorkloadIdentitySettings{
 				TokenFile: "/tokens/azure-identity-token",
 				// Ignored unless InMemory is set.
-				AssertionURL: "http://tokensvc",
+				AssertionURL: "https://tokensvc",
 			},
 		}
 		retriever, err := newWorkloadIdentityTokenRetriever(settings, credentials)
@@ -59,10 +59,10 @@ func TestNewWorkloadIdentityTokenRetriever_Selection(t *testing.T) {
 	})
 
 	t.Run("with the toggle it uses the in-memory retriever", func(t *testing.T) {
-		retriever, err := newWorkloadIdentityTokenRetriever(inMemorySettings("http://tokensvc"), credentials)
+		retriever, err := newWorkloadIdentityTokenRetriever(inMemorySettings("https://tokensvc"), credentials)
 		require.NoError(t, err)
 		require.IsType(t, &workloadIdentityInMemoryTokenRetriever{}, retriever)
-		assert.Contains(t, retriever.GetCacheKey("mt"), "azure|wi-mem|"+testTenantID+"|"+testClientID+"|http://tokensvc|")
+		assert.Contains(t, retriever.GetCacheKey("mt"), "azure|wi-mem|"+testTenantID+"|"+testClientID+"|https://tokensvc|")
 		assert.True(t, strings.HasSuffix(retriever.GetCacheKey("mt"), "|mt"))
 	})
 
@@ -74,19 +74,30 @@ func TestNewWorkloadIdentityTokenRetriever_Selection(t *testing.T) {
 			require.NoError(t, err)
 			return r.GetCacheKey("mt")
 		}
-		base := build("http://tokensvc", "token-1")
-		assert.Equal(t, base, build("http://tokensvc", "token-1"))
-		assert.NotEqual(t, base, build("http://other", "token-1"))
-		assert.NotEqual(t, base, build("http://tokensvc", "token-2"))
+		base := build("https://tokensvc", "token-1")
+		assert.Equal(t, base, build("https://tokensvc", "token-1"))
+		assert.NotEqual(t, base, build("https://other", "token-1"))
+		assert.NotEqual(t, base, build("https://tokensvc", "token-2"))
 		assert.NotContains(t, base, "token-1")
 	})
 
 	t.Run("in-memory cache keys never collide with token file cache keys", func(t *testing.T) {
-		mem, err := newWorkloadIdentityTokenRetriever(inMemorySettings("http://tokensvc"), credentials)
+		mem, err := newWorkloadIdentityTokenRetriever(inMemorySettings("https://tokensvc"), credentials)
 		require.NoError(t, err)
 		file, err := newWorkloadIdentityTokenRetriever(&azsettings.AzureSettings{WorkloadIdentitySettings: &azsettings.WorkloadIdentitySettings{}}, credentials)
 		require.NoError(t, err)
 		assert.NotEqual(t, file.GetCacheKey("mt"), mem.GetCacheKey("mt"))
+	})
+
+	t.Run("in-memory requires an https assertion URL outside localhost", func(t *testing.T) {
+		for _, u := range []string{"http://tokensvc", "ftp://tokensvc", "tokensvc", "https://"} {
+			_, err := newWorkloadIdentityTokenRetriever(inMemorySettings(u), credentials)
+			require.Error(t, err, u)
+		}
+		for _, u := range []string{"https://tokensvc", "http://localhost:8080", "http://127.0.0.1:8080", "http://[::1]:8080"} {
+			_, err := newWorkloadIdentityTokenRetriever(inMemorySettings(u), credentials)
+			require.NoError(t, err, u)
+		}
 	})
 
 	t.Run("in-memory requires the assertion URL", func(t *testing.T) {
@@ -95,12 +106,12 @@ func TestNewWorkloadIdentityTokenRetriever_Selection(t *testing.T) {
 	})
 
 	t.Run("in-memory requires tenant and client IDs", func(t *testing.T) {
-		_, err := newWorkloadIdentityTokenRetriever(inMemorySettings("http://tokensvc"), &azcredentials.AzureWorkloadIdentityCredentials{})
+		_, err := newWorkloadIdentityTokenRetriever(inMemorySettings("https://tokensvc"), &azcredentials.AzureWorkloadIdentityCredentials{})
 		require.ErrorContains(t, err, "tenant ID and a client ID")
 	})
 
 	t.Run("in-memory falls back to server-level tenant and client IDs", func(t *testing.T) {
-		settings := inMemorySettings("http://tokensvc")
+		settings := inMemorySettings("https://tokensvc")
 		settings.WorkloadIdentitySettings.TenantId = testTenantID
 		settings.WorkloadIdentitySettings.ClientId = testClientID
 		retriever, err := newWorkloadIdentityTokenRetriever(settings, &azcredentials.AzureWorkloadIdentityCredentials{})
@@ -118,7 +129,7 @@ func TestNewAzureAccessTokenProvider_WorkloadIdentityInMemory(t *testing.T) {
 	})
 
 	t.Run("still requires workload identity to be enabled", func(t *testing.T) {
-		settings := inMemorySettings("http://tokensvc")
+		settings := inMemorySettings("https://tokensvc")
 		settings.WorkloadIdentityEnabled = false
 		_, err := NewAzureAccessTokenProvider(settings, credentials, false)
 		require.ErrorContains(t, err, "not enabled")
