@@ -33,6 +33,19 @@ type WorkloadIdentitySettings struct {
 	TenantId  string
 	ClientId  string
 	TokenFile string
+
+	// InMemory is set when the workloadIdentityInMemory feature toggle is on.
+	// Client assertions are then requested from AssertionURL on demand and kept
+	// in memory only, instead of being read from TokenFile.
+	InMemory bool
+	// AssertionURL is the base URL of the service that mints client assertions.
+	AssertionURL string
+	// AssertionCallerToken authenticates this process to the assertion service.
+	AssertionCallerToken string
+	// StackID is the Grafana stack this process serves, sent to the assertion service only when
+	// Grafana reports none in the request's plugin context (namespace "stacks-<id>"), for example
+	// on a local or single-tenant Grafana. A stack from Grafana always takes precedence.
+	StackID string
 }
 
 type TokenEndpointSettings struct {
@@ -151,6 +164,18 @@ func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
 		}
 		if v := cfg.Get(WorkloadIdentityTokenFile); v != "" {
 			settings.WorkloadIdentitySettings.TokenFile = v
+		}
+		if cfg.FeatureToggles().IsEnabled(WorkloadIdentityInMemoryFeatureToggle) {
+			settings.WorkloadIdentitySettings.InMemory = true
+		}
+		if v := cfg.Get(WorkloadIdentityAssertionURL); v != "" {
+			settings.WorkloadIdentitySettings.AssertionURL = v
+		}
+		if v := cfg.Get(WorkloadIdentityAssertionCallerToken); v != "" {
+			settings.WorkloadIdentitySettings.AssertionCallerToken = v
+		}
+		if v := cfg.Get(WorkloadIdentityStackID); v != "" {
+			settings.WorkloadIdentitySettings.StackID = v
 		}
 	}
 
