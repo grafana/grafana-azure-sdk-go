@@ -359,3 +359,32 @@ func TestWorkloadIdentityInMemory_BlocksWithoutAStack(t *testing.T) {
 	}
 	assert.Equal(t, 0, calls, "no assertion should be requested without a stack")
 }
+
+// With the in-memory retriever selected from env settings there is no toggle in the request
+// context and Grafana may send no multi-tenant ID. Two stacks sharing the identity and service
+// settings must still each get their own assertion, not the other's cached token.
+func TestWorkloadIdentityInMemory_StacksDoNotShareACacheEntry(t *testing.T) {
+	var stacks []string
+	tokensvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stacks = append(stacks, r.Header.Get(stackHeader))
+		_ = json.NewEncoder(w).Encode(map[string]any{"token": "assertion-for-" + r.Header.Get(stackHeader)})
+	}))
+	defer tokensvc.Close()
+
+	retriever, err := newWorkloadIdentityTokenRetriever(
+		inMemorySettings(tokensvc.URL),
+		&azcredentials.AzureWorkloadIdentityCredentials{TenantId: testTenantID, ClientId: testClientID},
+	)
+	require.NoError(t, err)
+	entra := &fakeEntra{}
+	retriever.(*workloadIdentityInMemoryTokenRetriever).clientOptions = azcore.ClientOptions{Transport: entra}
+
+	cache := NewConcurrentTokenCache()
+	scopes := []string{"https://management.azure.com/.default"}
+	for _, ns := range []string{"stacks-42", "stacks-77", "stacks-42"} {
+		_, err := cache.GetAccessToken(contextWithNamespace(ns), retriever, scopes)
+		require.NoError(t, err, ns)
+	}
+
+	assert.Equal(t, []string{"42", "77"}, stacks, "each stack mints once; the repeat for 42 is served from its own entry")
+}
