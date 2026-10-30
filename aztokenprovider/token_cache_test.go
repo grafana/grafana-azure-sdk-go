@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
-	"github.com/grafana/grafana-plugin-sdk-go/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -561,30 +559,35 @@ func (r *keyRecordingRetriever) GetCacheKey(grafanaMultiTenantId string) string 
 	return r.key
 }
 
-func TestConcurrentTokenCache_TenantIdFallsBackToStackBehindToggle(t *testing.T) {
+// stackScopedRecordingRetriever opts in to stack scoping.
+type stackScopedRecordingRetriever struct {
+	keyRecordingRetriever
+}
+
+func (r *stackScopedRecordingRetriever) scopedToStack() {}
+
+func TestConcurrentTokenCache_TenantIdFallsBackToStackForStackScopedRetrievers(t *testing.T) {
 	cache := NewConcurrentTokenCache()
 
-	withToggle := func(ctx context.Context) context.Context {
-		return config.WithGrafanaConfig(ctx, config.NewGrafanaCfg(map[string]string{
-			"GF_INSTANCE_FEATURE_TOGGLES_ENABLE": azsettings.WorkloadIdentityInMemoryFeatureToggle,
-		}))
+	newScoped := func(key string) *stackScopedRecordingRetriever {
+		return &stackScopedRecordingRetriever{keyRecordingRetriever{fakeRetriever: fakeRetriever{key: key}}}
 	}
 
 	t.Run("uses the stack Grafana reports when there is no multi-tenant ID", func(t *testing.T) {
-		r := &keyRecordingRetriever{fakeRetriever: fakeRetriever{key: "k"}}
-		_, err := cache.GetAccessToken(withToggle(contextWithNamespace("stacks-42")), r, []string{"s"})
+		r := newScoped("k")
+		_, err := cache.GetAccessToken(contextWithNamespace("stacks-42"), r, []string{"s"})
 		require.NoError(t, err)
 		assert.Equal(t, "42", r.gotTenantId)
 	})
 
 	t.Run("stays empty when the namespace is not a stack", func(t *testing.T) {
-		r := &keyRecordingRetriever{fakeRetriever: fakeRetriever{key: "k2"}}
-		_, err := cache.GetAccessToken(withToggle(contextWithNamespace("default")), r, []string{"s"})
+		r := newScoped("k2")
+		_, err := cache.GetAccessToken(contextWithNamespace("default"), r, []string{"s"})
 		require.NoError(t, err)
 		assert.Equal(t, "", r.gotTenantId)
 	})
 
-	t.Run("does not use the stack without the feature toggle", func(t *testing.T) {
+	t.Run("does not change the key for retrievers that did not opt in", func(t *testing.T) {
 		r := &keyRecordingRetriever{fakeRetriever: fakeRetriever{key: "k3"}}
 		_, err := cache.GetAccessToken(contextWithNamespace("stacks-42"), r, []string{"s"})
 		require.NoError(t, err)

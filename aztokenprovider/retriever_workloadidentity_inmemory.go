@@ -104,7 +104,16 @@ func (c *workloadIdentityInMemoryTokenRetriever) Init() error {
 	return nil
 }
 
+// scopedToStack opts in to keeping cache entries apart per stack (see stackScopedTokenRetriever).
+func (c *workloadIdentityInMemoryTokenRetriever) scopedToStack() {}
+
 func (c *workloadIdentityInMemoryTokenRetriever) GetAccessToken(ctx context.Context, scopes []string) (*AccessToken, error) {
+	// Without a stack the assertion service cannot tell whose identity to mint for,
+	// so fail here instead of attempting an exchange.
+	if stackIDFromContext(ctx) == "" && c.stackID == "" {
+		return nil, fmt.Errorf("workload identity in memory requires a Grafana Cloud stack, but none was found in the request or the configuration")
+	}
+
 	accessToken, err := c.credential.GetToken(ctx, policy.TokenRequestOptions{Scopes: scopes})
 	if err != nil {
 		return nil, err

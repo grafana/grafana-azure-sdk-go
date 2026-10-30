@@ -8,12 +8,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
-	"github.com/grafana/grafana-plugin-sdk-go/config"
 	"google.golang.org/grpc/metadata"
 )
 
 const grafanaTenantId = "tenantID"
+
+// stackScopedTokenRetriever is implemented by retrievers whose cached tokens must
+// be kept apart per Grafana Cloud stack when Grafana sends no multi-tenant ID.
+type stackScopedTokenRetriever interface {
+	TokenRetriever
+	scopedToStack()
+}
 
 var (
 	// timeNow makes it possible to test usage of time
@@ -69,15 +74,16 @@ func (c *tokenCacheImpl) getEntryFor(ctx context.Context, credential TokenRetrie
 	var entry interface{}
 	var ok bool
 	tid := returnGrafanaMultiTenantId(ctx)
-	inMemoryEnabled := config.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled(azsettings.WorkloadIdentityInMemoryFeatureToggle)
-	if tid == "" && inMemoryEnabled {
-		// The tenant ID is not always set. Tenant and client IDs are not secret, so
-		// without it two stacks sharing them would share one cached token. Falling
-		// back to the stack Grafana reports keeps their entries apart.
+	if _, scoped := credential.(stackScopedTokenRetriever); scoped && tid == "" {
+		// Grafana does not always send a multi-tenant ID. Without one, the cache key
+		// is built only from the Azure tenant and client IDs. Those are not secret
+		// and can be shared by several stacks, which would then share one cached
+		// token. For retrievers that opt in, use the stack Grafana reports as the ID
+		// instead, so each stack gets its own entry.
 		//
-		// This gap is not specific to workload identity in memory. It is only behind
-		// that feature toggle to limit the blast radius: once it is confirmed to work
-		// end to end without breaking users, it can be enabled for every credential type.
+		// Every credential type has this gap. For now to reduce blast radius, this is opt-in, and
+		// only workload identity in memory does, so this change does not alter
+		// caching for the other datasources that depend on this SDK.
 		tid = stackIDFromContext(ctx)
 	}
 

@@ -254,7 +254,7 @@ func TestWorkloadIdentityInMemory_EndToEnd(t *testing.T) {
 	r.clientOptions = azcore.ClientOptions{Transport: entra}
 	require.NoError(t, r.Init())
 
-	token, err := r.GetAccessToken(context.Background(), []string{"https://management.azure.com/.default"})
+	token, err := r.GetAccessToken(contextWithNamespace("stacks-42"), []string{"https://management.azure.com/.default"})
 	require.NoError(t, err)
 
 	assert.Equal(t, "access-token-from-entra", token.Token)
@@ -338,4 +338,24 @@ func TestWorkloadIdentityInMemory_StackFromContextReachesTheTokenService(t *test
 	_, err = r.GetAccessToken(contextWithNamespace("stacks-77"), []string{"https://management.azure.com/.default"})
 	require.NoError(t, err)
 	assert.Equal(t, "77", stack)
+}
+
+func TestWorkloadIdentityInMemory_BlocksWithoutAStack(t *testing.T) {
+	calls := 0
+	tokensvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		_ = json.NewEncoder(w).Encode(map[string]any{"token": "assertion"})
+	}))
+	defer tokensvc.Close()
+
+	settings := inMemorySettings(tokensvc.URL)
+	retriever, err := newWorkloadIdentityTokenRetriever(settings, &azcredentials.AzureWorkloadIdentityCredentials{TenantId: testTenantID, ClientId: testClientID})
+	require.NoError(t, err)
+	require.NoError(t, retriever.Init())
+
+	for _, ctx := range []context.Context{context.Background(), contextWithNamespace("default")} {
+		_, err = retriever.GetAccessToken(ctx, []string{"https://management.azure.com/.default"})
+		require.ErrorContains(t, err, "requires a Grafana Cloud stack")
+	}
+	assert.Equal(t, 0, calls, "no assertion should be requested without a stack")
 }
