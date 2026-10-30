@@ -3,10 +3,12 @@ package aztokenprovider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -194,8 +196,13 @@ func TestHTTPAssertionProvider(t *testing.T) {
 // fakeEntra answers MSAL's tenant discovery and token requests, and records the
 // client_assertion it receives so the test can prove where it came from.
 type fakeEntra struct {
+	mu         sync.Mutex
 	assertions []string
 	clientIDs  []string
+
+	// perAssertion makes the access token depend on the assertion, so a test can
+	// tell whose token it received.
+	perAssertion bool
 }
 
 func (f *fakeEntra) Do(req *http.Request) (*http.Response, error) {
@@ -211,9 +218,15 @@ func (f *fakeEntra) Do(req *http.Request) (*http.Response, error) {
 	case strings.HasSuffix(req.URL.Path, "/oauth2/v2.0/token"):
 		raw, _ := io.ReadAll(req.Body)
 		form := mustParseForm(string(raw))
+		f.mu.Lock()
 		f.assertions = append(f.assertions, form["client_assertion"])
 		f.clientIDs = append(f.clientIDs, form["client_id"])
-		return respond(200, `{"token_type":"Bearer","expires_in":3600,"ext_expires_in":3600,"access_token":"access-token-from-entra"}`)
+		f.mu.Unlock()
+		accessToken := "access-token-from-entra"
+		if f.perAssertion {
+			accessToken = "access-for-" + form["client_assertion"]
+		}
+		return respond(200, `{"token_type":"Bearer","expires_in":3600,"ext_expires_in":3600,"access_token":"`+accessToken+`"}`)
 	case strings.Contains(req.URL.Path, "openid-configuration"):
 		base := req.URL.Scheme + "://" + req.URL.Host + "/" + testTenantID
 		return respond(200, `{"token_endpoint":"`+base+`/oauth2/v2.0/token","authorization_endpoint":"`+base+`/oauth2/v2.0/authorize","issuer":"`+base+`/v2.0"}`)
@@ -387,4 +400,67 @@ func TestWorkloadIdentityInMemory_StacksDoNotShareACacheEntry(t *testing.T) {
 	}
 
 	assert.Equal(t, []string{"42", "77"}, stacks, "each stack mints once; the repeat for 42 is served from its own entry")
+}
+
+func newStackScopedTestRetriever(t *testing.T, tokensvcURL string, entra *fakeEntra) TokenRetriever {
+	t.Helper()
+	retriever, err := newWorkloadIdentityTokenRetriever(
+		inMemorySettings(tokensvcURL),
+		&azcredentials.AzureWorkloadIdentityCredentials{TenantId: testTenantID, ClientId: testClientID},
+	)
+	require.NoError(t, err)
+	retriever.(*workloadIdentityInMemoryTokenRetriever).clientOptions = azcore.ClientOptions{Transport: entra}
+	return retriever
+}
+
+func stackEchoingTokenService(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"token": "assertion-for-" + r.Header.Get(stackHeader)})
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// Run with -race. Every stack gets its own cache entry, but they all initialize and use the one
+// retriever.
+func TestWorkloadIdentityInMemory_ConcurrentStacksAreRaceFree(t *testing.T) {
+	tokensvc := stackEchoingTokenService(t)
+	retriever := newStackScopedTestRetriever(t, tokensvc.URL, &fakeEntra{})
+	cache := NewConcurrentTokenCache()
+	scopes := []string{"https://management.azure.com/.default"}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_, err := cache.GetAccessToken(contextWithNamespace(fmt.Sprintf("stacks-%d", i%5)), retriever, scopes)
+			assert.NoError(t, err)
+		}(i)
+	}
+	wg.Wait()
+}
+
+// After stack 77 has used the retriever, refreshing stack 42's token must still yield 42's token.
+func TestWorkloadIdentityInMemory_RefreshStaysWithItsStack(t *testing.T) {
+	tokensvc := stackEchoingTokenService(t)
+	retriever := newStackScopedTestRetriever(t, tokensvc.URL, &fakeEntra{perAssertion: true})
+	cache := NewConcurrentTokenCache()
+	scopes := []string{"https://management.azure.com/.default"}
+
+	token42, err := cache.GetAccessToken(contextWithNamespace("stacks-42"), retriever, scopes)
+	require.NoError(t, err)
+	require.Equal(t, "access-for-assertion-for-42", token42)
+	_, err = cache.GetAccessToken(contextWithNamespace("stacks-77"), retriever, scopes)
+	require.NoError(t, err)
+
+	// Let the cache consider 42's token due for a refresh, while Entra's token is still valid.
+	realNow := timeNow
+	timeNow = func() time.Time { return realNow().Add(59 * time.Minute) }
+	defer func() { timeNow = realNow }()
+
+	refreshed, err := cache.GetAccessToken(contextWithNamespace("stacks-42"), retriever, scopes)
+	require.NoError(t, err)
+	assert.Equal(t, "access-for-assertion-for-42", refreshed, "stack 42 must not receive stack 77's token")
 }

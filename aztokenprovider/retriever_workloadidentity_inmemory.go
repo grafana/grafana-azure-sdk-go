@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -35,7 +36,14 @@ type workloadIdentityInMemoryTokenRetriever struct {
 
 	// clientOptions lets tests replace the HTTP transport.
 	clientOptions azcore.ClientOptions
-	credential    azcore.TokenCredential
+
+	// credentials keeps a separate azidentity credential for each stack. This
+	// prevents one stack from being served a token that another stack's
+	// credential cached.
+	credentials map[string]azcore.TokenCredential
+	// credentialsMu prevents concurrent requests from reading and writing
+	// credentials at the same time.
+	credentialsMu sync.Mutex
 }
 
 // newWorkloadIdentityTokenRetriever picks the workload identity implementation.
@@ -90,7 +98,21 @@ func (c *workloadIdentityInMemoryTokenRetriever) GetCacheKey(grafanaMultiTenantI
 	return fmt.Sprintf("azure|wi-mem|%s|%s|%s|%s|%s|%s", c.tenantId, c.clientId, c.assertionURL, c.callerTokenHash, c.stackID, grafanaMultiTenantId)
 }
 
+// Init does nothing: the credentials are created per stack on first use, because
+// the stack is only known from the request (see credentialFor).
 func (c *workloadIdentityInMemoryTokenRetriever) Init() error {
+	return nil
+}
+
+// credentialFor returns the credential for stack, creating it on first use.
+func (c *workloadIdentityInMemoryTokenRetriever) credentialFor(stack string) (azcore.TokenCredential, error) {
+	c.credentialsMu.Lock()
+	defer c.credentialsMu.Unlock()
+
+	if credential, ok := c.credentials[stack]; ok {
+		return credential, nil
+	}
+
 	getAssertion := func(ctx context.Context) (string, error) {
 		return c.provider.GetAssertion(ctx, c.tenantId, c.clientId)
 	}
@@ -98,10 +120,13 @@ func (c *workloadIdentityInMemoryTokenRetriever) Init() error {
 		ClientOptions: c.clientOptions,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	c.credential = credential
-	return nil
+	if c.credentials == nil {
+		c.credentials = map[string]azcore.TokenCredential{}
+	}
+	c.credentials[stack] = credential
+	return credential, nil
 }
 
 // scopedToStack opts in to keeping cache entries apart per stack (see stackScopedTokenRetriever).
@@ -110,11 +135,19 @@ func (c *workloadIdentityInMemoryTokenRetriever) scopedToStack() {}
 func (c *workloadIdentityInMemoryTokenRetriever) GetAccessToken(ctx context.Context, scopes []string) (*AccessToken, error) {
 	// Without a stack the assertion service cannot tell whose identity to mint for,
 	// so fail here instead of attempting an exchange.
-	if stackIDFromContext(ctx) == "" && c.stackID == "" {
+	stack := stackIDFromContext(ctx)
+	if stack == "" {
+		stack = c.stackID
+	}
+	if stack == "" {
 		return nil, fmt.Errorf("workload identity in memory requires a Grafana Cloud stack, but none was found in the request or the configuration")
 	}
 
-	accessToken, err := c.credential.GetToken(ctx, policy.TokenRequestOptions{Scopes: scopes})
+	credential, err := c.credentialFor(stack)
+	if err != nil {
+		return nil, err
+	}
+	accessToken, err := credential.GetToken(ctx, policy.TokenRequestOptions{Scopes: scopes})
 	if err != nil {
 		return nil, err
 	}
