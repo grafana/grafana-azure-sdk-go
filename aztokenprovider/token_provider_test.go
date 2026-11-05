@@ -474,7 +474,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("will not use fallback credentials if username assertion enabled and fallback credentials enabled", func(t *testing.T) {
+		t.Run("will use fallback credentials if username assertion enabled and fallback credentials enabled", func(t *testing.T) {
 			var provider AzureTokenProvider = &userTokenProvider{
 				tokenCache:        &tokenCacheFake{},
 				tokenRetriever:    &clientSecretTokenRetriever{},
@@ -490,9 +490,37 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
 			}))
 
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
+			}
+
 			_, err = provider.GetAccessToken(settingsctx, scopes)
-			require.Error(t, err)
-			require.ErrorContains(t, err, "fallback credentials not enabled")
+			require.NoError(t, err)
+		})
+
+		t.Run("will use fallback credentials if username assertion enabled, ID forwarding enabled and user has no ID token", func(t *testing.T) {
+			var provider AzureTokenProvider = &userTokenProvider{
+				tokenCache:        &tokenCacheFake{},
+				tokenRetriever:    &clientSecretTokenRetriever{},
+				usernameAssertion: true,
+			}
+
+			getAccessTokenFunc = func(retriever TokenRetriever, scopes []string) {
+				assert.IsType(t, &clientSecretTokenRetriever{}, retriever)
+			}
+
+			// e.g. alert evaluation, which runs as the "grafana_scheduler" user
+			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
+				User: &backend.User{Login: "grafana_scheduler"},
+			})
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
+				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
+				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
+				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
+			}))
+
+			_, err = provider.GetAccessToken(settingsctx, scopes)
+			require.NoError(t, err)
 		})
 
 		t.Run("will not use fallback credentials if disabled", func(t *testing.T) {
