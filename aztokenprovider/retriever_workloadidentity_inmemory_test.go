@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -463,4 +465,102 @@ func TestWorkloadIdentityInMemory_RefreshStaysWithItsStack(t *testing.T) {
 	refreshed, err := cache.GetAccessToken(contextWithNamespace("stacks-42"), retriever, scopes)
 	require.NoError(t, err)
 	assert.Equal(t, "access-for-assertion-for-42", refreshed, "stack 42 must not receive stack 77's token")
+}
+
+func TestHTTPAssertionProvider_CallerTokenFile(t *testing.T) {
+	writeToken := func(t *testing.T, path, content string) {
+		t.Helper()
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+	}
+
+	t.Run("sends the file's content and picks up a replaced token", func(t *testing.T) {
+		var gotAuth []string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotAuth = append(gotAuth, r.Header.Get("Authorization"))
+			_, _ = w.Write([]byte(`{"token":"t"}`))
+		}))
+		defer srv.Close()
+
+		path := filepath.Join(t.TempDir(), "token")
+		writeToken(t, path, "first-token\n")
+		provider, err := NewHTTPAssertionProviderWithTokenFile(srv.URL, path, "my-stack", nil)
+		require.NoError(t, err)
+
+		_, err = provider.GetAssertion(context.Background(), testTenantID, testClientID)
+		require.NoError(t, err)
+		writeToken(t, path, "second-token")
+		_, err = provider.GetAssertion(context.Background(), testTenantID, testClientID)
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{"Bearer first-token", "Bearer second-token"}, gotAuth)
+	})
+
+	t.Run("fails without sending anything when the file cannot be used", func(t *testing.T) {
+		var requests int
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			requests++
+			_, _ = w.Write([]byte(`{"token":"t"}`))
+		}))
+		defer srv.Close()
+
+		dir := t.TempDir()
+		empty := filepath.Join(dir, "empty")
+		writeToken(t, empty, " \n")
+		large := filepath.Join(dir, "large")
+		writeToken(t, large, strings.Repeat("a", maxCallerTokenFileSize+1))
+
+		for name, path := range map[string]string{
+			"missing": filepath.Join(dir, "missing"),
+			"empty":   empty,
+			"too big": large,
+		} {
+			t.Run(name, func(t *testing.T) {
+				provider, err := NewHTTPAssertionProviderWithTokenFile(srv.URL, path, "", nil)
+				require.NoError(t, err)
+				_, err = provider.GetAssertion(context.Background(), testTenantID, testClientID)
+				require.Error(t, err)
+				assert.NotContains(t, err.Error(), "aaaa")
+			})
+		}
+		assert.Zero(t, requests, "an unusable token file must not turn into an unauthenticated request")
+	})
+
+	t.Run("requires a file", func(t *testing.T) {
+		_, err := NewHTTPAssertionProviderWithTokenFile("https://tokensvc.example", "", "", nil)
+		require.Error(t, err)
+	})
+}
+
+func TestWorkloadIdentityInMemory_CallerTokenFile(t *testing.T) {
+	var gotAuth []string
+	tokensvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = append(gotAuth, r.Header.Get("Authorization"))
+		_ = json.NewEncoder(w).Encode(map[string]any{"token": "assertion-from-tokensvc"})
+	}))
+	defer tokensvc.Close()
+
+	path := filepath.Join(t.TempDir(), "token")
+	require.NoError(t, os.WriteFile(path, []byte("file-token"), 0o600))
+	settings := inMemorySettings(tokensvc.URL) // also carries a fixed caller token
+	settings.WorkloadIdentitySettings.AssertionCallerTokenFile = path
+	creds := &azcredentials.AzureWorkloadIdentityCredentials{TenantId: testTenantID, ClientId: testClientID}
+
+	retriever, err := getWorkloadIdentityInMemoryTokenRetriever(settings, creds)
+	require.NoError(t, err)
+	r := retriever.(*workloadIdentityInMemoryTokenRetriever)
+	r.clientOptions = azcore.ClientOptions{Transport: &fakeEntra{}}
+
+	_, err = r.GetAccessToken(contextWithNamespace("stacks-42"), []string{"https://management.azure.com/.default"})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"Bearer file-token"}, gotAuth, "the file wins over a fixed token")
+
+	// The file's content is replaced every few minutes; the cache key must not change with it.
+	keyBefore := r.GetCacheKey("")
+	require.NoError(t, os.WriteFile(path, []byte("rotated-token"), 0o600))
+	assert.Equal(t, keyBefore, r.GetCacheKey(""))
+	assert.NotContains(t, keyBefore, "file-token")
+
+	other, err := getWorkloadIdentityInMemoryTokenRetriever(inMemorySettings(tokensvc.URL), creds)
+	require.NoError(t, err)
+	assert.NotEqual(t, keyBefore, other.GetCacheKey(""), "a fixed token and a token file must not share a cache entry")
 }

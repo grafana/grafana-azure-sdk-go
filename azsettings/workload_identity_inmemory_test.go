@@ -44,10 +44,11 @@ func TestReadFromContext_WorkloadIdentityInMemory(t *testing.T) {
 
 	t.Run("is on when the workloadIdentityInMemory feature toggle is enabled", func(t *testing.T) {
 		settings, ok := ReadFromContext(contextWithConfig(with(map[string]string{
-			featuretoggles.EnabledFeatures:       "idForwarding," + WorkloadIdentityInMemoryFeatureToggle,
-			WorkloadIdentityAssertionURL:         "http://tokensvc:8081",
-			WorkloadIdentityAssertionCallerToken: "caller-token",
-			WorkloadIdentityStackID:              "my-stack",
+			featuretoggles.EnabledFeatures:           "idForwarding," + WorkloadIdentityInMemoryFeatureToggle,
+			WorkloadIdentityAssertionURL:             "http://tokensvc:8081",
+			WorkloadIdentityAssertionCallerToken:     "caller-token",
+			WorkloadIdentityAssertionCallerTokenFile: "/var/run/tokensvc/token",
+			WorkloadIdentityStackID:                  "my-stack",
 		})))
 		require.True(t, ok)
 		wi := settings.WorkloadIdentitySettings
@@ -55,6 +56,8 @@ func TestReadFromContext_WorkloadIdentityInMemory(t *testing.T) {
 		assert.Equal(t, "my-stack", wi.StackID)
 		assert.Equal(t, "http://tokensvc:8081", wi.AssertionURL)
 		assert.Equal(t, "caller-token", wi.AssertionCallerToken)
+		assert.Equal(t, "/var/run/tokensvc/token", wi.AssertionCallerTokenFile)
+		assert.Equal(t, "/var/run/tokensvc/token", wi.AssertionCallerTokenFile)
 	})
 
 	t.Run("does nothing when workload identity itself is disabled", func(t *testing.T) {
@@ -79,6 +82,7 @@ func TestReadFromEnv_WorkloadIdentityInMemory(t *testing.T) {
 		t.Setenv(WorkloadIdentityInMemory, "true")
 		t.Setenv(WorkloadIdentityAssertionURL, "http://tokensvc:8081")
 		t.Setenv(WorkloadIdentityAssertionCallerToken, "caller-token")
+		t.Setenv(WorkloadIdentityAssertionCallerTokenFile, "/var/run/tokensvc/token")
 		t.Setenv(WorkloadIdentityStackID, "my-stack")
 		settings, err := ReadFromEnv()
 		require.NoError(t, err)
@@ -87,6 +91,7 @@ func TestReadFromEnv_WorkloadIdentityInMemory(t *testing.T) {
 		assert.Equal(t, "my-stack", wi.StackID)
 		assert.Equal(t, "http://tokensvc:8081", wi.AssertionURL)
 		assert.Equal(t, "caller-token", wi.AssertionCallerToken)
+		assert.Equal(t, "/var/run/tokensvc/token", wi.AssertionCallerTokenFile)
 	})
 
 	t.Run("rejects an invalid value", func(t *testing.T) {

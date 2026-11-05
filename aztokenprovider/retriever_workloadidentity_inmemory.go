@@ -29,7 +29,8 @@ type workloadIdentityInMemoryTokenRetriever struct {
 	// assertionURL and callerTokenHash identify the assertion service
 	// configuration the retriever was built with. They are part of the cache key
 	// so that rotating either yields a new retriever instead of the cached one.
-	// Only a hash of the caller token is kept, so the key never holds the secret.
+	// Only a hash of the caller token is kept, so the key never holds the secret. For a token
+	// file it is the file's path instead.
 	assertionURL    string
 	callerTokenHash string
 	stackID         string
@@ -78,7 +79,17 @@ func getWorkloadIdentityInMemoryTokenRetriever(settings *azsettings.AzureSetting
 		return nil, fmt.Errorf("workload identity in memory requires a tenant ID and a client ID")
 	}
 
-	provider, err := NewHTTPAssertionProvider(wiSettings.AssertionURL, wiSettings.AssertionCallerToken, wiSettings.StackID, &http.Client{Timeout: 10 * time.Second})
+	// A token file wins over a fixed token. The cache key then holds the file's path, not its
+	// content, because the content changes every few minutes and the key must not.
+	var provider AssertionProvider
+	var err error
+	callerTokenHash := hashSecret(wiSettings.AssertionCallerToken)
+	if wiSettings.AssertionCallerTokenFile != "" {
+		provider, err = NewHTTPAssertionProviderWithTokenFile(wiSettings.AssertionURL, wiSettings.AssertionCallerTokenFile, wiSettings.StackID, &http.Client{Timeout: 10 * time.Second})
+		callerTokenHash = "file:" + wiSettings.AssertionCallerTokenFile
+	} else {
+		provider, err = NewHTTPAssertionProvider(wiSettings.AssertionURL, wiSettings.AssertionCallerToken, wiSettings.StackID, &http.Client{Timeout: 10 * time.Second})
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +100,7 @@ func getWorkloadIdentityInMemoryTokenRetriever(settings *azsettings.AzureSetting
 		provider: provider,
 
 		assertionURL:    wiSettings.AssertionURL,
-		callerTokenHash: hashSecret(wiSettings.AssertionCallerToken),
+		callerTokenHash: callerTokenHash,
 		stackID:         wiSettings.StackID,
 	}, nil
 }

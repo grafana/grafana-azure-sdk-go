@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -28,14 +29,19 @@ const maxAssertionResponseSize = 1 << 20
 // and derives subject and audience itself; this client only names the identity
 // it wants to authenticate as.
 type httpAssertionProvider struct {
-	baseURL     string
-	callerToken string
+	baseURL string
+	// callerToken returns the credential that identifies this process to the service. It is a
+	// function because the token may be replaced while the process runs.
+	callerToken func() (string, error)
 	stackID     string
 	client      *http.Client
 }
 
 // stackHeader carries the stack the request is for. The assertion service
 // ignores it unless the caller's credential is allowed to name its stack.
+//
+// TODO(experimental): temporary. The service trusts this header only from a platform workload on
+// its list. When it is hosted inside Grafana it is expected to take the stack from the ID token.
 const stackHeader = "X-Grafana-Stack"
 
 // NewHTTPAssertionProvider returns an AssertionProvider backed by the token
@@ -45,6 +51,48 @@ const stackHeader = "X-Grafana-Stack"
 // context (see stackIDFromContext). stackID (optional) is only the fallback for when
 // Grafana reports none, for example a local or single-tenant Grafana.
 func NewHTTPAssertionProvider(baseURL, callerToken, stackID string, client *http.Client) (AssertionProvider, error) {
+	return newHTTPAssertionProvider(baseURL, func() (string, error) { return callerToken, nil }, stackID, client)
+}
+
+// maxCallerTokenFileSize bounds what is read from a caller token file.
+const maxCallerTokenFileSize = 64 << 10
+
+// NewHTTPAssertionProviderWithTokenFile is like NewHTTPAssertionProvider, but the caller token
+// is read from tokenFile each time an assertion is requested. Use it for a token that is
+// replaced while the process runs, such as a Kubernetes projected service account token.
+//
+// TODO(experimental): temporary, until the token service is moved off Azure Container Apps and
+// hosted inside Grafana. There it is expected to authenticate callers with the ID token Grafana
+// forwards with each request, so the caller token, this file and the stack header go away.
+func NewHTTPAssertionProviderWithTokenFile(baseURL, tokenFile, stackID string, client *http.Client) (AssertionProvider, error) {
+	if tokenFile == "" {
+		return nil, fmt.Errorf("workload identity caller token file is not configured")
+	}
+	return newHTTPAssertionProvider(baseURL, func() (string, error) { return readCallerTokenFile(tokenFile) }, stackID, client)
+}
+
+// readCallerTokenFile reads the token without ever including it in an error.
+func readCallerTokenFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("read workload identity caller token file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	b, err := io.ReadAll(io.LimitReader(f, maxCallerTokenFileSize+1))
+	if err != nil {
+		return "", fmt.Errorf("read workload identity caller token file: %w", err)
+	}
+	if len(b) > maxCallerTokenFileSize {
+		return "", fmt.Errorf("workload identity caller token file is too large")
+	}
+	token := strings.TrimSpace(string(b))
+	if token == "" {
+		return "", fmt.Errorf("workload identity caller token file is empty")
+	}
+	return token, nil
+}
+
+func newHTTPAssertionProvider(baseURL string, callerToken func() (string, error), stackID string, client *http.Client) (AssertionProvider, error) {
 	if baseURL == "" {
 		return nil, fmt.Errorf("workload identity assertion URL is not configured")
 	}
@@ -96,8 +144,12 @@ func (p *httpAssertionProvider) GetAssertion(ctx context.Context, tenantID, clie
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if p.callerToken != "" {
-		req.Header.Set("Authorization", "Bearer "+p.callerToken)
+	callerToken, err := p.callerToken()
+	if err != nil {
+		return "", err
+	}
+	if callerToken != "" {
+		req.Header.Set("Authorization", "Bearer "+callerToken)
 	}
 	stack := stackIDFromContext(ctx)
 	if stack == "" {

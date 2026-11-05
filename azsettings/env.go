@@ -29,6 +29,13 @@ const (
 	WorkloadIdentityInMemory             = "GFAZPL_WORKLOAD_IDENTITY_IN_MEMORY"
 	WorkloadIdentityAssertionURL         = "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_URL"
 	WorkloadIdentityAssertionCallerToken = "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_CALLER_TOKEN"
+	// WorkloadIdentityAssertionCallerTokenFile names a file that holds the caller token, for a
+	// token that is replaced while the process runs. It takes precedence over the token itself.
+	//
+	// TODO(experimental): temporary, with the caller token above. Both go when the token service is
+	// moved off Azure Container Apps and hosted inside Grafana, where it is expected to authenticate
+	// callers with the ID token Grafana forwards with each request.
+	WorkloadIdentityAssertionCallerTokenFile = "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_CALLER_TOKEN_FILE"
 	// WorkloadIdentityStackID is the fallback stack for when Grafana reports none in the plugin
 	// context (its namespace is "stacks-<id>" on Grafana Cloud). It is sent to the assertion
 	// service, which decides whether to honor it.
@@ -100,6 +107,7 @@ func ReadFromEnv() (*AzureSettings, error) {
 		wiSettings.InMemory = inMemory
 		wiSettings.AssertionURL = envutil.GetOrDefault(WorkloadIdentityAssertionURL, "")
 		wiSettings.AssertionCallerToken = envutil.GetOrDefault(WorkloadIdentityAssertionCallerToken, "")
+		wiSettings.AssertionCallerTokenFile = envutil.GetOrDefault(WorkloadIdentityAssertionCallerTokenFile, "")
 		wiSettings.StackID = envutil.GetOrDefault(WorkloadIdentityStackID, "")
 		azureSettings.WorkloadIdentitySettings = wiSettings
 	}
@@ -203,6 +211,9 @@ func WriteToEnvStr(azureSettings *AzureSettings) []string {
 				}
 				if wiSettings.AssertionCallerToken != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityAssertionCallerToken, wiSettings.AssertionCallerToken))
+				}
+				if wiSettings.AssertionCallerTokenFile != "" {
+					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityAssertionCallerTokenFile, wiSettings.AssertionCallerTokenFile))
 				}
 				if wiSettings.StackID != "" {
 					envs = append(envs, fmt.Sprintf("%s=%s", WorkloadIdentityStackID, wiSettings.StackID))
