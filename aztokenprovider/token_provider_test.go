@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azusercontext"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -295,7 +296,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 				IdToken:        "FAKE_ID_TOKEN",
 				GrafanaIdToken: jwtToken,
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE": "idForwarding",
 			}))
 
@@ -419,7 +420,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 				User: &backend.User{},
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
@@ -440,7 +441,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			}
 
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
@@ -463,7 +464,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 				User: nil,
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
@@ -483,7 +484,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 				User: nil,
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
@@ -503,7 +504,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 				User: nil,
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GF_INSTANCE_FEATURE_TOGGLES_ENABLE":                        "idForwarding",
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "false",
@@ -528,7 +529,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 				User: nil,
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
 			}))
@@ -551,7 +552,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 				User: nil,
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
 			}))
@@ -578,7 +579,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 				User: nil,
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
 			}))
@@ -606,7 +607,7 @@ func TestGetAccessToken_UserIdentity(t *testing.T) {
 			usrctx := azusercontext.WithCurrentUser(ctx, azusercontext.CurrentUserContext{
 				User: nil,
 			})
-			settingsctx := backend.WithGrafanaConfig(usrctx, backend.NewGrafanaCfg(map[string]string{
+			settingsctx := config.WithGrafanaConfig(usrctx, config.NewGrafanaCfg(map[string]string{
 				"GFAZPL_USER_IDENTITY_ENABLED":                              "true",
 				"GFAZPL_USER_IDENTITY_FALLBACK_SERVICE_CREDENTIALS_ENABLED": "true",
 			}))

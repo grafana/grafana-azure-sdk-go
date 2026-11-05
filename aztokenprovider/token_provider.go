@@ -10,7 +10,7 @@ import (
 	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azusercontext"
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/config"
 )
 
 var (
@@ -207,7 +207,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 		return "", fmt.Errorf("user context not configured")
 	}
 
-	idForwardingSupported := backend.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled("idForwarding")
+	idForwardingSupported := config.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled("idForwarding")
 	backendRequest := isBackendRequest(currentUser, idForwardingSupported)
 
 	if backendRequest {

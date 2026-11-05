@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/config"
 )
 
 type AzureSettings struct {
@@ -65,7 +66,7 @@ func (settings *AzureSettings) GetDefaultCloud() string {
 
 // Changes here are dependant on https://github.com/grafana/grafana/tree/main/pkg/plugins/envvars/envvars.go#L148
 func ReadFromContext(ctx context.Context) (*AzureSettings, bool) {
-	cfg := backend.GrafanaConfigFromContext(ctx)
+	cfg := config.GrafanaConfigFromContext(ctx)
 	settings := &AzureSettings{}
 
 	if cfg == nil {
