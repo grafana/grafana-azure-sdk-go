@@ -218,7 +218,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 
 	if backendRequest {
 		// Use fallback credentials if this is a backend request and fallback credentials are enabled
-		if settings.UserIdentityFallbackCredentialsEnabled && !provider.usernameAssertion {
+		if settings.UserIdentityFallbackCredentialsEnabled {
 			if provider.tokenRetriever != nil {
 				accessToken, err := provider.tokenCache.GetAccessToken(ctx, provider.tokenRetriever, scopes)
 				if err != nil {
