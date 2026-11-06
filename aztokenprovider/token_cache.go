@@ -13,6 +13,13 @@ import (
 
 const grafanaTenantId = "tenantID"
 
+// stackScopedTokenRetriever is implemented by retrievers whose cached tokens must
+// be kept apart per Grafana Cloud stack when Grafana sends no multi-tenant ID.
+type stackScopedTokenRetriever interface {
+	TokenRetriever
+	scopedToStack()
+}
+
 var (
 	// timeNow makes it possible to test usage of time
 	timeNow = time.Now
@@ -67,6 +74,18 @@ func (c *tokenCacheImpl) getEntryFor(ctx context.Context, credential TokenRetrie
 	var entry interface{}
 	var ok bool
 	tid := returnGrafanaMultiTenantId(ctx)
+	if _, scoped := credential.(stackScopedTokenRetriever); scoped && tid == "" {
+		// Grafana does not always send a multi-tenant ID. Without one, the cache key
+		// is built only from the Azure tenant and client IDs. Those are not secret
+		// and can be shared by several stacks, which would then share one cached
+		// token. For retrievers that opt in, use the stack Grafana reports as the ID
+		// instead, so each stack gets its own entry.
+		//
+		// Every credential type has this gap. For now to reduce blast radius, this is opt-in, and
+		// only workload identity in memory does, so this change does not alter
+		// caching for the other datasources that depend on this SDK.
+		tid = stackIDFromContext(ctx)
+	}
 
 	key := credential.GetCacheKey(tid)
 
