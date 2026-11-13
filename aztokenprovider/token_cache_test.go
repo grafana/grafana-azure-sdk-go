@@ -547,3 +547,50 @@ func TestTokenExpiry_GetAccessToken(t *testing.T) {
 	})
 
 }
+
+// keyRecordingRetriever records the grafanaMultiTenantId the cache derives for it.
+type keyRecordingRetriever struct {
+	fakeRetriever
+	gotTenantId string
+}
+
+func (r *keyRecordingRetriever) GetCacheKey(grafanaMultiTenantId string) string {
+	r.gotTenantId = grafanaMultiTenantId
+	return r.key
+}
+
+// stackScopedRecordingRetriever opts in to stack scoping.
+type stackScopedRecordingRetriever struct {
+	keyRecordingRetriever
+}
+
+func (r *stackScopedRecordingRetriever) scopedToStack() {}
+
+func TestConcurrentTokenCache_TenantIdFallsBackToStackForStackScopedRetrievers(t *testing.T) {
+	cache := NewConcurrentTokenCache()
+
+	newScoped := func(key string) *stackScopedRecordingRetriever {
+		return &stackScopedRecordingRetriever{keyRecordingRetriever{fakeRetriever: fakeRetriever{key: key}}}
+	}
+
+	t.Run("uses the stack Grafana reports when there is no multi-tenant ID", func(t *testing.T) {
+		r := newScoped("k")
+		_, err := cache.GetAccessToken(contextWithNamespace("stacks-42"), r, []string{"s"})
+		require.NoError(t, err)
+		assert.Equal(t, "42", r.gotTenantId)
+	})
+
+	t.Run("stays empty when the namespace is not a stack", func(t *testing.T) {
+		r := newScoped("k2")
+		_, err := cache.GetAccessToken(contextWithNamespace("default"), r, []string{"s"})
+		require.NoError(t, err)
+		assert.Equal(t, "", r.gotTenantId)
+	})
+
+	t.Run("does not change the key for retrievers that did not opt in", func(t *testing.T) {
+		r := &keyRecordingRetriever{fakeRetriever: fakeRetriever{key: "k3"}}
+		_, err := cache.GetAccessToken(contextWithNamespace("stacks-42"), r, []string{"s"})
+		require.NoError(t, err)
+		assert.Equal(t, "", r.gotTenantId)
+	})
+}

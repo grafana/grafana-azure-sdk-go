@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,7 +12,7 @@ func TestSettingsFromContext(t *testing.T) {
 	t.Run("ReadFromContext", func(t *testing.T) {
 		tcs := []struct {
 			name                string
-			cfg                 *backend.GrafanaCfg
+			cfg                 *config.GrafanaCfg
 			expectedHasSettings bool
 			expectedAzure       *AzureSettings
 		}{
@@ -24,25 +24,25 @@ func TestSettingsFromContext(t *testing.T) {
 			},
 			{
 				name:                "empty config",
-				cfg:                 &backend.GrafanaCfg{},
+				cfg:                 &config.GrafanaCfg{},
 				expectedAzure:       &AzureSettings{},
 				expectedHasSettings: false,
 			},
 			{
 				name:                "nil config map",
-				cfg:                 backend.NewGrafanaCfg(nil),
+				cfg:                 config.NewGrafanaCfg(nil),
 				expectedAzure:       &AzureSettings{},
 				expectedHasSettings: false,
 			},
 			{
 				name:                "empty config map",
-				cfg:                 backend.NewGrafanaCfg(make(map[string]string)),
+				cfg:                 config.NewGrafanaCfg(make(map[string]string)),
 				expectedAzure:       &AzureSettings{},
 				expectedHasSettings: false,
 			},
 			{
 				name: "azure settings in config",
-				cfg: backend.NewGrafanaCfg(map[string]string{
+				cfg: config.NewGrafanaCfg(map[string]string{
 					AzureCloud:                              AzurePublic,
 					AzureAuthEnabled:                        "true",
 					ManagedIdentityEnabled:                  "true",
@@ -89,7 +89,7 @@ func TestSettingsFromContext(t *testing.T) {
 		}
 
 		for _, tc := range tcs {
-			ctx := backend.WithGrafanaConfig(context.Background(), tc.cfg)
+			ctx := config.WithGrafanaConfig(context.Background(), tc.cfg)
 			settings, hasSettings := ReadFromContext(ctx)
 
 			require.Equal(t, tc.expectedAzure, settings)
@@ -181,14 +181,14 @@ func TestReadSettings(t *testing.T) {
 	t.Run("ReadSettings", func(t *testing.T) {
 		tcs := []struct {
 			name          string
-			cfg           *backend.GrafanaCfg
+			cfg           *config.GrafanaCfg
 			expectedError error
 			expectedAzure *AzureSettings
 		}{
 
 			{
 				name: "read from context",
-				cfg: backend.NewGrafanaCfg(map[string]string{
+				cfg: config.NewGrafanaCfg(map[string]string{
 					AzureCloud:                              AzurePublic,
 					ManagedIdentityEnabled:                  "true",
 					ManagedIdentityClientID:                 "mock_managed_identity_client_id",
@@ -217,26 +217,26 @@ func TestReadSettings(t *testing.T) {
 			},
 			{
 				name:          "read from env if config is empty",
-				cfg:           &backend.GrafanaCfg{},
+				cfg:           &config.GrafanaCfg{},
 				expectedAzure: expectedAzureEnvSettings,
 				expectedError: nil,
 			},
 			{
 				name:          "read from env if config map is nil",
-				cfg:           backend.NewGrafanaCfg(nil),
+				cfg:           config.NewGrafanaCfg(nil),
 				expectedAzure: expectedAzureEnvSettings,
 				expectedError: nil,
 			},
 			{
 				name:          "read from env if config map is empty",
-				cfg:           backend.NewGrafanaCfg(make(map[string]string)),
+				cfg:           config.NewGrafanaCfg(make(map[string]string)),
 				expectedAzure: expectedAzureEnvSettings,
 				expectedError: nil,
 			},
 		}
 
 		for _, tc := range tcs {
-			ctx := backend.WithGrafanaConfig(context.Background(), tc.cfg)
+			ctx := config.WithGrafanaConfig(context.Background(), tc.cfg)
 			settings, err := ReadSettings(ctx)
 
 			require.Equal(t, tc.expectedAzure, settings)

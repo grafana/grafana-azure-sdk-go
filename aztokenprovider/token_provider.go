@@ -11,7 +11,7 @@ import (
 	"github.com/grafana/grafana-azure-sdk-go/v2/azcredentials"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azsettings"
 	"github.com/grafana/grafana-azure-sdk-go/v2/azusercontext"
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/config"
 )
 
 var (
@@ -51,7 +51,10 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			err = fmt.Errorf("workload identity authentication is not enabled in Grafana config")
 			return nil, err
 		}
-		tokenRetriever := getWorkloadIdentityTokenRetriever(settings, c)
+		tokenRetriever, err := newWorkloadIdentityTokenRetriever(settings, c)
+		if err != nil {
+			return nil, err
+		}
 		return &serviceTokenProvider{
 			tokenCache:     azureTokenCache,
 			tokenRetriever: tokenRetriever,
@@ -105,7 +108,10 @@ func NewAzureAccessTokenProvider(settings *azsettings.AzureSettings, credentials
 			case *azcredentials.AzureManagedIdentityCredentials:
 				tokenRetriever = getManagedIdentityTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureManagedIdentityCredentials))
 			case *azcredentials.AzureWorkloadIdentityCredentials:
-				tokenRetriever = getWorkloadIdentityTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureWorkloadIdentityCredentials))
+				tokenRetriever, err = newWorkloadIdentityTokenRetriever(settings, c.ServiceCredentials.(*azcredentials.AzureWorkloadIdentityCredentials))
+				if err != nil {
+					return nil, err
+				}
 
 			}
 		}
@@ -210,7 +216,7 @@ func (provider *userTokenProvider) GetAccessToken(ctx context.Context, scopes []
 		return "", fmt.Errorf("user context not configured")
 	}
 
-	idForwardingSupported := backend.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled("idForwarding")
+	idForwardingSupported := config.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled("idForwarding")
 	backendRequest := isBackendRequest(currentUser, idForwardingSupported)
 
 	if backendRequest {
