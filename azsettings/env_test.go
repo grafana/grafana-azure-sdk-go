@@ -2,6 +2,7 @@ package azsettings
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -530,6 +531,48 @@ func TestWriteToEnvStr(t *testing.T) {
 		require.Len(t, envs, 2)
 		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ENABLED=true", envs[0])
 		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_TENANT_ID=ba556b7e", envs[1])
+	})
+
+	t.Run("should return workload identity in-memory settings if provided", func(t *testing.T) {
+		azureSettings := &AzureSettings{
+			WorkloadIdentityEnabled: true,
+			WorkloadIdentitySettings: &WorkloadIdentitySettings{
+				InMemory:             true,
+				AssertionURL:         "https://assertions.example.com",
+				AssertionCallerToken: "caller-token",
+				StackID:              "1234",
+			},
+		}
+
+		envs := WriteToEnvStr(azureSettings)
+
+		require.Len(t, envs, 5)
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ENABLED=true", envs[0])
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_IN_MEMORY=true", envs[1])
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_URL=https://assertions.example.com", envs[2])
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_ASSERTION_CALLER_TOKEN=caller-token", envs[3])
+		assert.Equal(t, "GFAZPL_WORKLOAD_IDENTITY_STACK_ID=1234", envs[4])
+	})
+
+	t.Run("should round-trip workload identity in-memory settings through env", func(t *testing.T) {
+		want := &WorkloadIdentitySettings{
+			TenantId:             "ba556b7e",
+			ClientId:             "547121e7",
+			InMemory:             true,
+			AssertionURL:         "https://assertions.example.com",
+			AssertionCallerToken: "caller-token",
+			StackID:              "1234",
+		}
+
+		for _, kv := range WriteToEnvStr(&AzureSettings{WorkloadIdentityEnabled: true, WorkloadIdentitySettings: want}) {
+			k, v, _ := strings.Cut(kv, "=")
+			t.Setenv(k, v)
+		}
+
+		got, err := ReadFromEnv()
+
+		require.NoError(t, err)
+		assert.Equal(t, want, got.WorkloadIdentitySettings)
 	})
 
 	t.Run("should return workload identity client ID if provided", func(t *testing.T) {
