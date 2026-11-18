@@ -21,7 +21,7 @@ import (
 type TokenClient interface {
 	FromClientSecret(ctx context.Context, scopes []string) (*AccessToken, error)
 	FromRefreshToken(ctx context.Context, refreshToken string, scopes []string) (*AccessToken, error)
-	OnBehalfOf(ctx context.Context, idToken string, scopes []string) (*AccessToken, error)
+	OnBehalfOf(ctx context.Context, assertion string, scopes []string) (*AccessToken, error)
 	FromUsername(ctx context.Context, username string, scopes []string) (*AccessToken, error)
 }
 
@@ -95,10 +95,10 @@ func (c *tokenClientImpl) FromRefreshToken(ctx context.Context, refreshToken str
 	return accessToken, nil
 }
 
-func (c *tokenClientImpl) OnBehalfOf(ctx context.Context, idToken string, scopes []string) (*AccessToken, error) {
+func (c *tokenClientImpl) OnBehalfOf(ctx context.Context, assertion string, scopes []string) (*AccessToken, error) {
 	queryParams := url.Values{}
 	queryParams.Set("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer")
-	queryParams.Set("assertion", idToken)
+	queryParams.Set("assertion", assertion)
 	queryParams.Set("requested_token_use", "on_behalf_of")
 
 	accessToken, err := c.requestToken(ctx, queryParams, scopes)
