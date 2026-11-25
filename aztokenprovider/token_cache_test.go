@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -592,5 +593,131 @@ func TestConcurrentTokenCache_TenantIdFallsBackToStackForStackScopedRetrievers(t
 		_, err := cache.GetAccessToken(contextWithNamespace("stacks-42"), r, []string{"s"})
 		require.NoError(t, err)
 		assert.Equal(t, "", r.gotTenantId)
+	})
+}
+
+// lazyBodyError mimics azidentity.AuthenticationFailedError, whose Error method
+// writes to the cached response body, so concurrent calls on one value race.
+type lazyBodyError struct {
+	code  string
+	reads int
+}
+
+func (e *lazyBodyError) Error() string {
+	e.reads++
+	return fmt.Sprintf(`ClientSecretCredential authentication failed. RESPONSE 401: {"error_description": "%s: test"}`, e.code)
+}
+
+func TestScopesCacheEntry_HoldsNonRetryableEntraFailures(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 11, 21, 0, 0, 0, 0, time.UTC)
+	timeNow = func() time.Time { return now }
+	t.Cleanup(func() { timeNow = time.Now })
+
+	newEntry := func(r TokenRetriever) *scopesCacheEntry {
+		return &scopesCacheEntry{retriever: r, scopes: []string{"Scope1"}, cond: sync.NewCond(&sync.Mutex{})}
+	}
+	failingWith := func(err func() error) *fakeRetriever {
+		return &fakeRetriever{getAccessTokenFunc: func(context.Context, []string) (*AccessToken, error) {
+			return nil, err()
+		}}
+	}
+	entraCode := func(code string) func() error {
+		return func() error { return &lazyBodyError{code: code} }
+	}
+
+	for _, code := range []string{"AADSTS7000222", "AADSTS7000215", "AADSTS700016", "AADSTS90002"} {
+		t.Run(code+" is returned without a new request until the hold ends", func(t *testing.T) {
+			r := failingWith(entraCode(code))
+			entry := newEntry(r)
+			failures := tokenRequestFailures.WithLabelValues(code)
+			before := testutil.ToFloat64(failures)
+
+			for range 3 {
+				_, err := entry.getAccessToken(ctx)
+				require.ErrorContains(t, err, code)
+			}
+			now = now.Add(failureHold - time.Second)
+			_, err := entry.getAccessToken(ctx)
+			require.ErrorContains(t, err, code)
+			assert.Equal(t, 1, r.calledTimes)
+			assert.Equal(t, 1.0, testutil.ToFloat64(failures)-before)
+
+			now = now.Add(time.Second)
+			_, err = entry.getAccessToken(ctx)
+			require.ErrorContains(t, err, code)
+			assert.Equal(t, 2, r.calledTimes)
+			assert.Equal(t, 2.0, testutil.ToFloat64(failures)-before)
+		})
+	}
+
+	notHeld := map[string]func() error{
+		"throttled (AADSTS50196)":                entraCode("AADSTS50196"),
+		"a longer code that starts with 90002":   entraCode("AADSTS900023"),
+		"a longer code that starts with 7000222": entraCode("AADSTS70002220"),
+		"an error with no Entra code":            func() error { return errors.New("dial tcp: i/o timeout") },
+	}
+	for name, err := range notHeld {
+		t.Run(name+" is requested again on each call", func(t *testing.T) {
+			r := failingWith(err)
+			entry := newEntry(r)
+			failures := tokenRequestFailures.WithLabelValues("other")
+			before := testutil.ToFloat64(failures)
+
+			for range 3 {
+				_, err := entry.getAccessToken(ctx)
+				require.Error(t, err)
+			}
+			assert.Equal(t, 3, r.calledTimes)
+			assert.Equal(t, 3.0, testutil.ToFloat64(failures)-before)
+		})
+	}
+
+	t.Run("a token is requested again after the hold ends", func(t *testing.T) {
+		r := &fakeRetriever{}
+		r.getAccessTokenFunc = func(context.Context, []string) (*AccessToken, error) {
+			if r.calledTimes == 1 {
+				return nil, &lazyBodyError{code: "AADSTS7000222"}
+			}
+			return &AccessToken{Token: "renewed", ExpiresOn: timeNow().Add(time.Hour)}, nil
+		}
+		entry := newEntry(r)
+
+		_, err := entry.getAccessToken(ctx)
+		require.Error(t, err)
+		now = now.Add(failureHold)
+		token, err := entry.getAccessToken(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "renewed", token)
+	})
+
+	t.Run("concurrent callers share one request and can read the error", func(t *testing.T) {
+		const callers = 10
+		started := make(chan struct{})
+		release := make(chan struct{})
+		var once sync.Once
+		r := failingWith(func() error {
+			once.Do(func() { close(started) })
+			<-release
+			return &lazyBodyError{code: "AADSTS7000222"}
+		})
+		entry := newEntry(r)
+
+		messages := make(chan string, callers)
+		call := func() {
+			_, err := entry.getAccessToken(ctx)
+			messages <- err.Error()
+		}
+		go call()
+		<-started
+		for range callers - 1 {
+			go call()
+		}
+		close(release)
+
+		for range callers {
+			assert.Contains(t, <-messages, "AADSTS7000222")
+		}
+		assert.Equal(t, 1, r.calledTimes)
 	})
 }

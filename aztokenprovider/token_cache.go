@@ -2,12 +2,16 @@ package aztokenprovider
 
 import (
 	"context"
+	"errors"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -23,6 +27,19 @@ type stackScopedTokenRetriever interface {
 var (
 	// timeNow makes it possible to test usage of time
 	timeNow = time.Now
+
+	failureHold = 60 * time.Second
+
+	// heldEntraCodes fail again on every request until the credential or the
+	// app registration changes: expired secret, invalid secret, unknown app, unknown tenant.
+	heldEntraCodes = regexp.MustCompile(`\bAADSTS(7000222|7000215|700016|90002)\b`)
+
+	tokenRequestFailures = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "grafana",
+		Subsystem: "azure_sdk",
+		Name:      "token_request_failures_total",
+		Help:      `Failed Entra token requests, by AADSTS code for the held codes and "other" for the rest.`,
+	}, []string{"code"})
 )
 
 type AccessToken struct {
@@ -64,6 +81,9 @@ type scopesCacheEntry struct {
 	cond        *sync.Cond
 	refreshing  bool
 	accessToken *AccessToken
+
+	failure      error
+	failureUntil time.Time
 }
 
 func (c *tokenCacheImpl) GetAccessToken(ctx context.Context, tokenRetriever TokenRetriever, scopes []string) (string, error) {
@@ -168,6 +188,11 @@ func (c *scopesCacheEntry) getAccessToken(ctx context.Context) (string, error) {
 			break
 		}
 
+		if c.failure != nil && timeNow().Before(c.failureUntil) {
+			err = c.failure
+			break
+		}
+
 		if !c.refreshing {
 			// Start refreshing the token
 			c.refreshing = true
@@ -179,6 +204,10 @@ func (c *scopesCacheEntry) getAccessToken(ctx context.Context) (string, error) {
 		c.cond.Wait()
 	}
 	c.cond.L.Unlock()
+
+	if err != nil {
+		return "", err
+	}
 
 	if shouldRefresh {
 		accessToken, err = c.refreshAccessToken(ctx)
@@ -192,6 +221,7 @@ func (c *scopesCacheEntry) getAccessToken(ctx context.Context) (string, error) {
 
 func (c *scopesCacheEntry) refreshAccessToken(ctx context.Context) (*AccessToken, error) {
 	var accessToken *AccessToken
+	var failure error
 
 	// Safeguarding from panic caused by retriever implementation
 	defer func() {
@@ -202,6 +232,7 @@ func (c *scopesCacheEntry) refreshAccessToken(ctx context.Context) (*AccessToken
 		if accessToken != nil {
 			c.accessToken = accessToken
 		}
+		c.failure, c.failureUntil = failure, timeNow().Add(failureHold)
 
 		c.cond.Broadcast()
 		c.cond.L.Unlock()
@@ -209,6 +240,16 @@ func (c *scopesCacheEntry) refreshAccessToken(ctx context.Context) (*AccessToken
 
 	token, err := c.retriever.GetAccessToken(ctx, c.scopes)
 	if err != nil {
+		msg := err.Error()
+		code := heldEntraCodes.FindString(msg)
+		if code == "" {
+			code = "other"
+		} else {
+			// Callers share the held error, so hold a copy of its text. Error on an
+			// azidentity error writes to the response body and is not safe to share.
+			failure = errors.New(msg)
+		}
+		tokenRequestFailures.WithLabelValues(code).Inc()
 		return nil, err
 	}
 	accessToken = token
